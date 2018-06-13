@@ -1,4 +1,22 @@
+buildscript {
+    ext.kotlin_version = '1.2.50'
+    ext.ktor_version = '0.9.2'
+    ext.logback_version = '1.2.3'
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
 subprojects {
+    repositories {
+        mavenCentral()
+        maven { url "https://dl.bintray.com/kotlin/kotlinx" }
+        maven { url "https://dl.bintray.com/kotlin/ktor" }
+    }
+
     afterEvaluate {
         sourceSets {
             main.kotlin.srcDirs += "src"
