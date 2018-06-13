@@ -1,0 +1,3 @@
+rootProject.name = 'mmo-poc'
+
+include 'mmo-poc-common', 'mmo-poc-jvm', 'mmo-poc-js', 'mmo-backend'
