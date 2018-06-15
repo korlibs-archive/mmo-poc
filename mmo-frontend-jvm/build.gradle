@@ -2,6 +2,7 @@ apply plugin: 'kotlin-platform-jvm'
 
 dependencies {
     expectedBy project(":mmo-frontend-common")
+    compile project(":mmo-shared-jvm")
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "com.soywiz:korge:$korge_version"
     testCompile "junit:junit:4.12"

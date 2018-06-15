@@ -2,13 +2,17 @@
 apply plugin: 'kotlin-platform-jvm'
 apply plugin: 'application'
 
-mainClassName = "mmopoc.BackendKt"
+//mainClassName = "mmopoc.BackendKt"
+mainClassName = "mmopoc.Experiments"
 
 dependencies {
-    expectedBy project(":mmo-shared")
+    compile project(":mmo-shared-jvm")
 
     compile "io.ktor:ktor-server-netty:$ktor_version"
     compile "io.ktor:ktor-websockets:$ktor_version"
+    compile "io.ktor:ktor-auth:$ktor_version"
+    compile "io.ktor:ktor-client-apache:$ktor_version"
+    compile "io.ktor:ktor-jackson:$ktor_version"
 
     compile "ch.qos.logback:logback-classic:$logback_version"
 

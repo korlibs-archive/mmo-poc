@@ -4,3 +4,6 @@
 /mmo-poc-common/build
 /mmo-poc-js/build
 /mmo-poc-jvm/build
+*.iml
+*.ipr
+*.iws
