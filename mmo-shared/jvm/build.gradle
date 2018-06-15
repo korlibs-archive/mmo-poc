@@ -1,0 +1,10 @@
+apply plugin: 'kotlin-platform-jvm'
+apply plugin: 'kotlinx-serialization'
+
+dependencies {
+    expectedBy project(":mmo-shared")
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serialization_version"
+    //testCompile "org.jetbrains.kotlin:kotlin-test-annotations:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+}

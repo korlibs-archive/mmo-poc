@@ -7,6 +7,7 @@ import com.soywiz.korge.view.*
 import com.soywiz.korim.color.*
 import com.soywiz.korinject.*
 import com.soywiz.korio.async.*
+import com.soywiz.korio.lang.*
 import com.soywiz.korio.net.ws.*
 import kotlin.coroutines.experimental.*
 
@@ -22,18 +23,25 @@ open class MmoModule : Module() {
 }
 
 class ConnectionService : AsyncDependency {
-    lateinit var ws: WebSocketClient
+    var ws: WebSocketClient? = null
 
     override suspend fun init() {
-        ws = WebSocketClient("ws://127.0.0.1:8080/")
+        try {
+            ws = WebSocketClient("ws://127.0.0.1:8080/")
 
-        launch(coroutineContext) {
-            while (true) {
-                val packet = ws.receivePacket()
-                println("CLIENT RECEIVED: $packet")
+            launch(coroutineContext) {
+                while (ws != null) {
+                    val packet = ws?.receivePacket()
+                    println("CLIENT RECEIVED: $packet")
+                }
             }
+        } catch (e: Throwable) {
+            e.printStackTrace()
         }
     }
+
+    suspend inline fun <reified T : Any> send(packet: T) = run { ws?.sendPacket(packet) }
+    suspend fun receive(): Any? = ws?.receivePacket()
 }
 
 class MainScene(
@@ -56,7 +64,7 @@ class MainScene(
                 }
             }
         })
-        connection.ws.sendPacket(Say("HELLO FROM CLIENT"))
+        connection.send(Say("HELLO FROM CLIENT"))
     }
 }
 

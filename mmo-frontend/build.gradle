@@ -1,7 +1,7 @@
 apply plugin: 'kotlin-platform-common'
 
 dependencies {
-    compile project(":mmo-shared-common")
+    compile project(":mmo-shared")
     compile "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version"
     compile "com.soywiz:korge-common:$korge_version"
     testCompile "org.jetbrains.kotlin:kotlin-test-annotations-common:$kotlin_version"
