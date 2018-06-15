@@ -1,6 +1,13 @@
 apply plugin: 'kotlin-platform-js'
 apply plugin: 'kotlinx-serialization'
 
+sourceSets {
+    main.kotlin.srcDirs += "src"
+    main.resources.srcDirs += "resources"
+    test.kotlin.srcDirs += "test"
+    test.resources.srcDirs += "testresources"
+}
+
 [compileKotlin2Js, compileTestKotlin2Js]*.configure {
     kotlinOptions.moduleKind = "umd"
     kotlinOptions.sourceMap = false

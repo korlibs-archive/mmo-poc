@@ -1,6 +1,13 @@
 apply plugin: 'kotlin-platform-common'
 apply plugin: 'kotlinx-serialization'
 
+sourceSets {
+    main.kotlin.srcDirs += "src"
+    main.resources.srcDirs += "resources"
+    test.kotlin.srcDirs += "test"
+    test.resources.srcDirs += "testresources"
+}
+
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version"
     compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime-common:$serialization_version"

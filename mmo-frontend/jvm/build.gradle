@@ -3,6 +3,13 @@ apply plugin: 'application'
 
 mainClassName = "mmopoc.FrontendJvmKt"
 
+sourceSets {
+    main.kotlin.srcDirs += "src"
+    main.resources.srcDirs += "resources"
+    test.kotlin.srcDirs += "test"
+    test.resources.srcDirs += "testresources"
+}
+
 dependencies {
     expectedBy project(":mmo-frontend")
     compile project(":mmo-shared:jvm")

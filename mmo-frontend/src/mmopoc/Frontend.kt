@@ -29,19 +29,19 @@ class ConnectionService : AsyncDependency {
         try {
             ws = WebSocketClient("ws://127.0.0.1:8080/")
 
-            launch(coroutineContext) {
-                while (ws != null) {
-                    val packet = ws?.receivePacket()
-                    println("CLIENT RECEIVED: $packet")
-                }
-            }
+            //launch(coroutineContext) {
+            //    while (ws != null) {
+            //        val packet = ws?.receivePacket()
+            //        println("CLIENT RECEIVED: $packet")
+            //    }
+            //}
         } catch (e: Throwable) {
             e.printStackTrace()
         }
     }
 
-    suspend inline fun <reified T : Any> send(packet: T) = run { ws?.sendPacket(packet) }
-    suspend fun receive(): Any? = ws?.receivePacket()
+    //suspend inline fun <reified T : Any> send(packet: T) = run { ws?.sendPacket(packet) }
+    //suspend fun receive(): Any? = ws?.receivePacket()
 }
 
 class MainScene(
@@ -64,11 +64,11 @@ class MainScene(
                 }
             }
         })
-        connection.send(Say("HELLO FROM CLIENT"))
+        //connection.send(Say("HELLO FROM CLIENT"))
     }
 }
 
-
+/*
 suspend inline fun <reified T : Any> WebSocketClient.sendPacket(obj: T) {
     this.send(serializePacket(obj))
 }
@@ -76,3 +76,4 @@ suspend inline fun <reified T : Any> WebSocketClient.sendPacket(obj: T) {
 suspend fun WebSocketClient.receivePacket(): Any {
     return deserializePacket(this.onStringMessage.waitOne())
 }
+*/

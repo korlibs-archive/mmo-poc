@@ -1,6 +1,13 @@
 apply plugin: 'kotlin-platform-jvm'
 apply plugin: 'kotlinx-serialization'
 
+sourceSets {
+    main.kotlin.srcDirs += "src"
+    main.resources.srcDirs += "resources"
+    test.kotlin.srcDirs += "test"
+    test.resources.srcDirs += "testresources"
+}
+
 dependencies {
     expectedBy project(":mmo-shared")
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"

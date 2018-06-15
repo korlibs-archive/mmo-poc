@@ -2,10 +2,19 @@ apply plugin: 'kotlin-platform-js'
 
 dependencies {
     expectedBy project(":mmo-frontend")
+    //expectedBy project(":mmo-shared")
+    compile project(":mmo-shared")
     compile project(":mmo-shared:js")
     compile "org.jetbrains.kotlin:kotlin-stdlib-js:$kotlin_version"
     compile "com.soywiz:korge-js:$korge_version"
     testCompile "org.jetbrains.kotlin:kotlin-test-js:$kotlin_version"
+}
+
+sourceSets {
+    main.kotlin.srcDirs += "src"
+    main.resources.srcDirs += "resources"
+    test.kotlin.srcDirs += "test"
+    test.resources.srcDirs += "testresources"
 }
 
 compileKotlin2Js {

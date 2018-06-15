@@ -4,6 +4,13 @@ apply plugin: 'application'
 
 mainClassName = "mmopoc.both.SelfContainerServerAndClientKt"
 
+sourceSets {
+    main.kotlin.srcDirs += "src"
+    main.resources.srcDirs += "resources"
+    test.kotlin.srcDirs += "test"
+    test.resources.srcDirs += "testresources"
+}
+
 dependencies {
     compile project(":mmo-backend")
     compile project(":mmo-frontend:jvm")

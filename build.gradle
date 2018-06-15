@@ -25,32 +25,4 @@ subprojects {
         maven { url "https://dl.bintray.com/soywiz/soywiz" }
         maven { url "https://kotlin.bintray.com/kotlinx" }
     }
-
-
-    it.afterEvaluate {
-        sourceSets {
-            main.kotlin.srcDirs += "src"
-            main.resources.srcDirs += "resources"
-            test.kotlin.srcDirs += "test"
-            test.resources.srcDirs += "testresources"
-        }
-
-        //def common = it.plugins.hasPlugin("kotlin-platform-common")
-        //def js = it.plugins.hasPlugin("kotlin-platform-js") || it.plugins.hasPlugin("kotlin2js")
-        //def jvm = it.plugins.hasPlugin("kotlin-platform-jvm") || it.plugins.hasPlugin("kotlin")
-        //if (common || js || jvm) {
-        //
-        //    //println("Configured for ${it}")
-        //} else {
-        //    //println("Not configured for ${it}")
-        //}
-        //if (js) {
-        //    [compileKotlin2Js, compileTestKotlin2Js]*.configure {
-        //        kotlinOptions.moduleKind = "umd"
-        //        kotlinOptions.sourceMap = false
-        //        kotlinOptions.metaInfo = false
-        //    }
-        //}
-    }
 }
-
