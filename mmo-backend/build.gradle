@@ -30,3 +30,5 @@ task runExperiment(type: JavaExec) {
     main = "mmopoc.Experiments"
     classpath = sourceSets.main.runtimeClasspath
 }
+
+kotlin.experimental.coroutines "enable"

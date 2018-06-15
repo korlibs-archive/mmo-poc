@@ -1,6 +1,16 @@
 apply plugin: 'kotlin-platform-js'
 apply plugin: 'kotlinx-serialization'
 
+[compileKotlin2Js, compileTestKotlin2Js]*.configure {
+    kotlinOptions.moduleKind = "umd"
+    kotlinOptions.sourceMap = false
+    kotlinOptions.metaInfo = false
+}
+
+//compileKotlin2Js {
+//    kotlinOptions.outputFile = "${rootProject.projectDir}/${web_dir}/shared.js"
+//}
+
 dependencies {
     expectedBy project(":mmo-shared")
     compile "org.jetbrains.kotlin:kotlin-stdlib-js:$kotlin_version"
