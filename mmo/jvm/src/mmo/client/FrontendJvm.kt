@@ -1,4 +1,4 @@
-package mmopoc
+package mmo.client
 
 import com.soywiz.korge.*
 

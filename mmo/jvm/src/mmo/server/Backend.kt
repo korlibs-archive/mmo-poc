@@ -1,4 +1,4 @@
-package mmopoc.backend
+package mmo.server
 
 import io.ktor.application.*
 import io.ktor.content.*
@@ -11,7 +11,7 @@ import io.ktor.server.netty.*
 import io.ktor.sessions.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.experimental.channels.*
-import mmopoc.*
+import mmo.protocol.*
 import java.io.*
 
 class MySession(val userId: String)
@@ -30,6 +30,11 @@ fun main(args: Array<String>) {
         install(Sessions) {
             cookie<MySession>("oauthSampleSessionId")
         }
+
+        val webFolder = listOf(".", "..", "../..", "../../..").map { File(it).absoluteFile["web"] }.firstOrNull { it.exists() }
+
+        println("webFolder:$webFolder")
+
         routing {
             webSocket("/") {
                 this.outgoing.sendPacket(Say("HELLO FROM SERVER"))
@@ -39,16 +44,16 @@ fun main(args: Array<String>) {
                 }
             }
 
-            get("/") {
-                call.respondFile(File("web/index.html"))
-            }
-
             static("/") {
-                files(File("web"))
+                if (webFolder != null) files(webFolder)
+                resources()
+                default("index.html")
             }
         }
     }.start(wait = true)
 }
+
+operator fun File.get(name: String): File = File(this, name)
 
 suspend fun ReceiveChannel<Frame>.receivePacket(): Any {
     val frame = this.receive() as Frame.Text

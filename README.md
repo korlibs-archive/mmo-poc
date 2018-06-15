@@ -3,23 +3,17 @@
 Run the backend:
 
 ```
-./gradlew :mmo-backend:run
+./gradlew :mmo:jvm:runServer
 ```
 
-Run the frontend:
+Run the frontend JVM:
 
 ```
-./gradlew :mmo-frontend:jvm:run
+./gradlew :mmo:jvm:runClient
 ```
 
 Run the frontend JS:
 
 ```
-./gradlew :mmo-frontend:js:buildAndCopy
-```
-
-~~Run both in the same process~~ (not working yet):
-
-```
-./gradlew :mmo-backend-frontend:run
+./gradlew :mmo:js:buildAndCopy
 ```

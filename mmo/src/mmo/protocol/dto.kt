@@ -1,4 +1,4 @@
-package mmopoc
+package mmo.protocol
 
 import kotlinx.serialization.*
 

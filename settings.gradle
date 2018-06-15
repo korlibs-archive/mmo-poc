@@ -1,10 +1,5 @@
 rootProject.name = 'mmo-poc'
 
-include 'mmo-frontend',
-        'mmo-frontend:jvm',
-        'mmo-frontend:js',
-        'mmo-backend',
-        'mmo-backend-frontend',
-        'mmo-shared',
-        'mmo-shared:js',
-        'mmo-shared:jvm'
+include 'mmo',
+        'mmo:jvm',
+        'mmo:js'

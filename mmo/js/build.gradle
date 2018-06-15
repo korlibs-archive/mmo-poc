@@ -1,20 +1,19 @@
 apply plugin: 'kotlin-platform-js'
-
-dependencies {
-    expectedBy project(":mmo-frontend")
-    //expectedBy project(":mmo-shared")
-    compile project(":mmo-shared")
-    compile project(":mmo-shared:js")
-    compile "org.jetbrains.kotlin:kotlin-stdlib-js:$kotlin_version"
-    compile "com.soywiz:korge-js:$korge_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test-js:$kotlin_version"
-}
+apply plugin: 'kotlinx-serialization'
 
 sourceSets {
     main.kotlin.srcDirs += "src"
     main.resources.srcDirs += "resources"
     test.kotlin.srcDirs += "test"
     test.resources.srcDirs += "testresources"
+}
+
+dependencies {
+    expectedBy project(":mmo")
+    compile "org.jetbrains.kotlin:kotlin-stdlib-js:$kotlin_version"
+    compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime-js:$serialization_version"
+    compile "com.soywiz:korge-js:$korge_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test-js:$kotlin_version"
 }
 
 compileKotlin2Js {
