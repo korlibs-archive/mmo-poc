@@ -11,7 +11,10 @@ interface ServerPacket : BasePacket
 
 // Client Packets
 @Serializable
-data class Say(val text: String) : ClientPacket
+data class ClientSay(val text: String) : ClientPacket
+
+@Serializable
+data class ClientRequestMove(val x: Double, val y: Double) : ClientPacket
 
 // Server Packets
 @Serializable
@@ -37,7 +40,7 @@ data class EntityMove(
     val totalTime: Double
 ) : ServerPacket
 
-// Conversation
+// Server Packets: Conversation
 
 @Serializable
 data class ConversationStart(val id: Long, val npcId: Long) : ServerPacket
@@ -56,7 +59,8 @@ data class ConversationOptions(val id: Long, val text: String, val options: List
 
 // @TODO: It is possible to list @Serializable classes?
 val serializableClasses = listOf(
-    Say::class,
+    ClientSay::class,
+    ClientRequestMove::class,
 
     SetUserId::class,
     EntityAppear::class,

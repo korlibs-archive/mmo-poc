@@ -1,6 +1,7 @@
 package mmo.server
 
 import com.soywiz.korio.*
+import com.soywiz.korma.*
 import io.ktor.application.*
 import io.ktor.content.*
 import io.ktor.http.cio.websocket.*
@@ -23,7 +24,7 @@ class MySession(val userId: String)
 
 object Experiments {
     @JvmStatic fun main(args: Array<String>) {
-        val packet = serializePacket(Say("HELLO"), Say::class)
+        val packet = serializePacket(ClientSay("HELLO"), ClientSay::class)
         println(packet)
         println(deserializePacket(packet))
     }
@@ -54,7 +55,9 @@ fun main(args: Array<String>) {
                         //println("OFFERING: $packet")
                         sendQueue.offer(packet)
                     }
-                })
+                }).apply {
+                    this.src = com.soywiz.korma.geom.Point2d(25.0, 25.0)
+                }
 
                 websocketWriteProcess(coroutineContext, this, user, sendQueue)
                 user.send(SetUserId(user.id))
@@ -71,6 +74,7 @@ fun main(args: Array<String>) {
             get("/") {
                 if (webFolder != null) {
                     call.respondFile(webFolder["index.html"])
+                    finish()
                 }
             }
 
@@ -99,16 +103,22 @@ fun websocketWriteProcess(
 
 suspend fun DefaultWebSocketServerSession.websocketReadProcess(user: User) {
     try {
+        var moveJob: Job? = null
         while (true) {
-            val packet =
-                incoming.receivePacket() as? ClientPacket ?: error("Trying to send an invalid packet")
+            val packet = incoming.receivePacket() as? ClientPacket ?: error("Trying to send an invalid packet")
             when (packet) {
-                is Say -> {
+                is ClientSay -> {
                     // Everyone on the room will read the text
                     user.container?.send(EntitySay(user.id, packet.text))
                 }
+                is ClientRequestMove -> {
+                    moveJob?.cancel()
+                    moveJob = launch {
+                        user.moveTo(packet.x, packet.y)
+                    }
+                }
             }
-            println(packet)
+            //println(packet)
         }
     } catch (e: ClosedReceiveChannelException) {
         // Do nothing!

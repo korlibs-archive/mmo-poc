@@ -2,22 +2,26 @@ package mmo.server
 
 import com.soywiz.klock.*
 import com.soywiz.korma.geom.*
+import com.soywiz.korma.interpolation.*
 import kotlinx.coroutines.experimental.*
 import mmo.protocol.*
 import java.util.concurrent.*
 
-class TimedPosition(val pos: Point2d = Point2d(), val time: Long = 0L)
-
 open class Entity() {
     var container: EntityContainer? = null
+
     companion object {
         var lastId = 1L
     }
+
     var name = "unknown"
     var skin = "none"
     var id = lastId++
     var src = Point2d()
-    var dst = TimedPosition()
+    var dst = Point2d()
+    var timeStart = 0L
+    var timeEnd = 0L
+    val totalTime get() = timeEnd - timeStart
     var lookAt: Entity? = null
     var speed = 64.0 // 32 pixels per second
 }
@@ -26,14 +30,16 @@ interface PacketSendChannel {
     fun send(packet: ServerPacket)
 }
 
-open class User(val sc: PacketSendChannel) : Entity(), PacketSendChannel by sc {
+open class User(val sc: PacketSendChannel) : Actor(), PacketSendChannel by sc {
 }
 
 class NpcConversation(val npc: Npc, val user: User) {
     companion object {
         var lastId: Long = 1
     }
+
     val id = lastId++
+
     class Option<T>(val title: String, val callback: suspend NpcConversation.() -> T)
 
     init {
@@ -63,39 +69,8 @@ abstract class Npc() : Actor() {
         val conversation = NpcConversation(this, user)
         callback(conversation)
     }
-}
-
-abstract class Actor() : Entity() {
-    fun changeTo(callback: suspend () -> Unit): Unit = throw ChangeActionException(callback)
 
     abstract suspend fun script(): Unit
-
-    suspend fun speed(scale: Double = 64.0) {
-        this.speed = scale
-    }
-
-    suspend fun moveTo(x: Number, y: Number) = moveTo(Point2d(x, y))
-
-    suspend fun moveTo(point: Point2d) {
-        val dist = (src - point).length
-        val time = dist / speed
-        dst = TimedPosition(point.copy(), System.currentTimeMillis() + (time.seconds).milliseconds)
-        container?.send(EntityMove(id, src.x, src.y, dst.pos.x, dst.pos.y, 0.0, time))
-        wait(time.seconds)
-        src = dst.pos
-    }
-
-    suspend fun say(text: String) {
-        container?.send(EntitySay(id, text))
-    }
-
-    suspend fun lookAt(entity: Entity) {
-        this.lookAt = entity
-    }
-
-    suspend fun wait(time: TimeSpan) {
-        delay(time.milliseconds.toLong(), TimeUnit.MILLISECONDS)
-    }
 
     open suspend fun onUserInterfaction(user: User) {
     }
@@ -116,6 +91,61 @@ abstract class Actor() : Entity() {
         launch {
             run()
         }
+    }
+}
+
+abstract class Actor() : Entity() {
+    fun changeTo(callback: suspend () -> Unit): Unit = throw ChangeActionException(callback)
+
+
+    suspend fun speed(scale: Double = 64.0) {
+        this.speed = scale
+    }
+
+    fun setPositionTo(x: Number, y: Number) {
+        this.src.setTo(x, y)
+        this.dst.setTo(x, y)
+        this.timeStart = 0L
+        this.timeEnd = 0L
+    }
+
+
+    suspend fun moveTo(x: Number, y: Number) = moveTo(Point2d(x, y))
+
+    fun getInterpolatedPosition(now: Long): Point2d {
+        if (now > timeEnd) return dst
+        val elapsedTime = now - timeStart
+        val ratio = elapsedTime.toDouble() / totalTime.toDouble()
+        return Point2d(
+            interpolate(src.x, dst.x, ratio),
+            interpolate(src.y, dst.y, ratio)
+        )
+    }
+
+    suspend fun moveTo(point: Point2d) {
+        val now = System.currentTimeMillis()
+        val dist = (src - point).length
+        val time = dist / speed
+        val currentSrc = getInterpolatedPosition(now)
+        src = currentSrc.copy()
+        timeStart = now
+        timeEnd = now + (time.seconds).milliseconds
+        dst = point.copy()
+        container?.send(EntityMove(id, src.x, src.y, dst.x, dst.y, 0.0, time))
+        wait(time.seconds)
+        src = dst
+    }
+
+    suspend fun say(text: String) {
+        container?.send(EntitySay(id, text))
+    }
+
+    suspend fun lookAt(entity: Entity) {
+        this.lookAt = entity
+    }
+
+    suspend fun wait(time: TimeSpan) {
+        delay(time.milliseconds.toLong(), TimeUnit.MILLISECONDS)
     }
 }
 

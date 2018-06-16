@@ -1,12 +1,14 @@
 package mmo.client
 
 import com.soywiz.klock.*
-import com.soywiz.korge.*
+import com.soywiz.korge.component.*
+import com.soywiz.korge.input.*
 import com.soywiz.korge.render.*
 import com.soywiz.korge.resources.*
 import com.soywiz.korge.scene.*
 import com.soywiz.korge.tween.*
 import com.soywiz.korge.view.*
+import com.soywiz.korim.color.*
 import com.soywiz.korinject.*
 import com.soywiz.korio.async.*
 import com.soywiz.korio.lang.*
@@ -14,6 +16,7 @@ import com.soywiz.korio.net.ws.*
 import com.soywiz.korma.geom.*
 import mmo.protocol.*
 import kotlin.coroutines.experimental.*
+import kotlin.math.*
 import kotlin.reflect.*
 
 data class ServerEndPoint(val endpoint: String)
@@ -62,7 +65,10 @@ enum class CharDirection(val id: Int) {
 }
 
 class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineContext, val id: Long, val views: Views) {
-    val image = views.image(views.transparentTexture)
+    val image = views.image(views.transparentTexture).apply {
+        anchorX = 0.5
+        anchorY = 1.0
+    }
     val text = views.text("", textSize = 8.0)
     val view = views.container().apply {
         addChild(image)
@@ -94,11 +100,14 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
             view.tween(view::x[src.x, dst.x], view::y[src.y, dst.y], time = totalTime) { step ->
                 val elapsed = totalTime.seconds * step
                 val frame = (elapsed / 0.1).toInt()
+                val dx = (dst.x - src.x).absoluteValue
+                val dy = (dst.y - src.y).absoluteValue
+                val horizontal = dx >= dy
                 val direction = when {
-                    dst.x > src.x -> CharDirection.RIGHT
-                    dst.x < src.x -> CharDirection.LEFT
-                    dst.y < src.y -> CharDirection.UP
-                    dst.y > src.y -> CharDirection.DOWN
+                    horizontal && dst.x >= src.x -> CharDirection.RIGHT
+                    horizontal && dst.x < src.x -> CharDirection.LEFT
+                    !horizontal && dst.y < src.y -> CharDirection.UP
+                    !horizontal && dst.y >= src.y -> CharDirection.DOWN
                     else -> CharDirection.RIGHT
                 }
                 image.tex = skin[direction.id, frame % CharacterSkin.COLS]
@@ -122,8 +131,10 @@ class MainScene(
 ) : Scene() {
     var ws: WebSocketClient? = null
     val entitiesById = LinkedHashMap<Long, ClientEntity>()
+    val background by lazy { views.solidRect(1280, 720, RGBA(0x1e, 0x28, 0x3c, 0xFF)) }
     val entityContainer by lazy {
         views.container().apply {
+            this += background
             scale = 2.0
             sceneView += this
         }
@@ -168,10 +179,19 @@ class MainScene(
 
     override suspend fun sceneInit(sceneView: Container) {
         init()
+        entityContainer.onClick {
+            val pos = it.currentPos
+            ws?.sendPacket(ClientRequestMove(pos.x, pos.y))
+        }
+        entityContainer.addComponent(object : Component(entityContainer) {
+            override fun update(dtMs: Int) {
+                entityContainer.children.sortBy { it.y }
+            }
+        })
     }
 }
 
-suspend fun <T : Any> WebSocketClient.sendPacket(obj: T, clazz: KClass<T>) {
+suspend fun <T : Any> WebSocketClient.sendPacket(obj: T, clazz: KClass<T> = obj::class as KClass<T>) {
     this.send(serializePacket(obj, clazz))
 }
 

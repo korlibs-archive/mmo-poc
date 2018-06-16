@@ -21,15 +21,12 @@ open class EntityContainer : PacketSendChannel {
         send(EntityDisappear(entity.id))
     }
 
-    fun notifyMove(entity: Entity, src: TimedPosition, dst: TimedPosition) {
-    }
-
     override fun send(packet: ServerPacket) {
         for (user in users) user.send(packet)
     }
 
     fun sendBut(but: Entity, packet: ServerPacket) {
-        for (user in users) if (user != but )user.send(packet)
+        for (user in users) if (user != but) user.send(packet)
     }
 }
 
