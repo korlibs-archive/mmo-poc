@@ -17,6 +17,7 @@ import com.soywiz.korio.lang.*
 import com.soywiz.korio.net.ws.*
 import com.soywiz.korma.geom.*
 import mmo.protocol.*
+import mmo.shared.*
 import kotlin.coroutines.experimental.*
 import kotlin.math.*
 import kotlin.reflect.*
@@ -64,9 +65,6 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
     }
 }
 
-enum class CharDirection(val id: Int) {
-    UP(0), RIGHT(1), DOWN(2), LEFT(3)
-}
 
 class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineContext, val id: Long, val views: Views) {
     val image = views.image(views.transparentTexture).apply {
@@ -119,6 +117,11 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
             }
             image.tex = skin[direction.id, 1]
         }
+    }
+
+    fun lookAt(direction: CharDirection) {
+        println("lookAt.DIRECTION[$this]: $direction")
+        image.tex = skin[direction.id, 0]
     }
 
     var sayPromise: Promise<Unit>? = null
@@ -226,6 +229,10 @@ class MainScene(
                     is UserBagUpdate -> {
                         bag[packet.item] = packet.amount
                         bagUpdated()
+                    }
+                    is EntityLookDirection -> {
+                        val entity = entitiesById[packet.entityId]
+                        entity?.lookAt(packet.direction)
                     }
                 }
             }

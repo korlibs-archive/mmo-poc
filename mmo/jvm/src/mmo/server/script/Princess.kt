@@ -4,11 +4,15 @@ import com.soywiz.klock.*
 import com.soywiz.korma.geom.*
 import mmo.server.*
 
-class Princess() : Npc() {
+class Princess(scene: ServerScene) : Npc() {
+    val levers = (0 until 6).map { Lever(it, 64 + 32 * it, 128) }
+
     init {
         src = Point2d(0, 50)
         skin = "princess1"
         name = "Princess"
+        scene.add(this)
+        for (lever in levers) scene.add(lever)
     }
 
     override suspend fun script() {

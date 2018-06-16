@@ -5,7 +5,9 @@ import com.soywiz.korma.geom.*
 import com.soywiz.korma.interpolation.*
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.*
+import mmo.client.*
 import mmo.protocol.*
+import mmo.shared.*
 import java.util.concurrent.*
 import kotlin.collections.set
 
@@ -25,6 +27,7 @@ open class Entity() {
     var timeEnd = 0L
     val totalTime get() = timeEnd - timeStart
     var lookAt: Entity? = null
+    var lookDirection: CharDirection = CharDirection.UP
     var speed = 64.0 // 32 pixels per second
 }
 
@@ -174,7 +177,7 @@ abstract class Actor() : Entity() {
         src = dst
     }
 
-    suspend fun say(text: String, vararg args: Any?) {
+    fun say(text: String, vararg args: Any?) {
         val formattedText = try {
             text.format(*args)
         } catch (e: Throwable) {
@@ -183,8 +186,13 @@ abstract class Actor() : Entity() {
         container?.send(EntitySay(id, formattedText))
     }
 
-    suspend fun lookAt(entity: Entity) {
+    fun lookAt(entity: Entity) {
         this.lookAt = entity
+    }
+
+    fun lookAt(direction: CharDirection) {
+        this.lookDirection = direction
+        container?.send(EntityLookDirection(this.id, direction))
     }
 
     suspend fun wait(time: TimeSpan) {

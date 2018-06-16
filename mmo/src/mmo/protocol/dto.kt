@@ -1,6 +1,7 @@
 package mmo.protocol
 
 import kotlinx.serialization.*
+import mmo.shared.*
 
 // @TODO: Would be nice if only @Serializable was needed here
 @Serializable
@@ -49,6 +50,12 @@ data class EntityMove(
     val totalTime: Double
 ) : ServerPacket
 
+@Serializable
+data class EntityLookDirection(
+    val entityId: Long,
+    val direction: CharDirection
+) : ServerPacket
+
 // Server Packets: Conversation
 
 @Serializable
@@ -85,6 +92,7 @@ val serializableClasses = listOf(
     EntityDisappear::class,
     EntitySay::class,
     EntityMove::class,
+    EntityLookDirection::class,
 
     // Conversations
     ConversationStart::class,

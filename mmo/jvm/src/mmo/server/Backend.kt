@@ -41,7 +41,7 @@ fun main(args: Array<String>) {
         println("webFolder:$webFolder")
 
         val mainScene = ServerScene("lobby")
-        mainScene.add(Princess().apply { start() })
+        Princess(mainScene).apply { start() }
 
         routing {
             static("/") {

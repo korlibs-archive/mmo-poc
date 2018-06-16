@@ -1,2 +1,2 @@
 ./gradlew buildAndCopy shadowJar
-docker run -m512M --cpus 2 -it -p 8080:8080 -v $PWD:/root:ro -w /root openjdk:8-jre-alpine java -server -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:InitialRAMFraction=2 -XX:MinRAMFraction=2 -XX:MaxRAMFraction=2 -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+UseStringDeduplication -jar /root/mmo-server.jar
+docker run -m512M --cpus 2 -it -p 8080:8080 -v $PWD:/root:ro -w /root openjdk:8-jre-alpi<prine java -server -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:InitialRAMFraction=2 -XX:MinRAMFraction=2 -XX:MaxRAMFraction=2 -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+UseStringDeduplication -jar /root/mmo-server.jar
