@@ -71,4 +71,10 @@ shadowJar {
     mainClassName = "mmo.server.BackendKt"
     classifier = null
     version = null
+    doLast {
+        copy {
+            from new File(rootProject.rootDir, "mmo/jvm/build/libs/mmo-server.jar")
+            into rootProject.rootDir
+        }
+    }
 }

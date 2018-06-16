@@ -11,3 +11,5 @@
 *.iml
 *.ipr
 *.iws
+/mmo-server.jar
+
