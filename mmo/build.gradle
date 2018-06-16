@@ -17,3 +17,6 @@ dependencies {
 }
 
 kotlin.experimental.coroutines "enable"
+
+build.dependsOn ':mmo:js:buildAndCopy'
+build.dependsOn ':mmo:jvm:build'

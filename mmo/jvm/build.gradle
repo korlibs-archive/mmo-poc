@@ -1,8 +1,19 @@
+buildscript {
+    repositories {
+        jcenter()
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath "com.github.jengelman.gradle.plugins:shadow:2.0.3"
+    }
+}
+
 apply plugin: 'kotlin-platform-jvm'
 apply plugin: 'kotlinx-serialization'
+apply plugin: "com.github.johnrengelman.shadow"
 apply plugin: 'application'
 
-mainClassName = "mmo.client.FrontendJvmKt"
+mainClassName = "mmo.server.BackendKt"
 
 sourceSets {
     main.kotlin.srcDirs += "src"
@@ -54,3 +65,10 @@ task runServer(type: JavaExec) {
 }
 
 kotlin.experimental.coroutines "enable"
+
+shadowJar {
+    baseName = 'mmo-server'
+    mainClassName = "mmo.server.BackendKt"
+    classifier = null
+    version = null
+}
