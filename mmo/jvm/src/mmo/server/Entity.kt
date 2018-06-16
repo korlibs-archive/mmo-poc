@@ -19,7 +19,7 @@ open class Entity() {
     var src = Point2d()
     var dst = TimedPosition()
     var lookAt: Entity? = null
-    var speed = 32.0 // 32 pixels per second
+    var speed = 64.0 // 32 pixels per second
 }
 
 interface PacketSendChannel {
@@ -70,7 +70,7 @@ abstract class Actor() : Entity() {
 
     abstract suspend fun script(): Unit
 
-    suspend fun speed(scale: Double = 1.0) {
+    suspend fun speed(scale: Double = 64.0) {
         this.speed = scale
     }
 

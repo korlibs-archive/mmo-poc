@@ -1,6 +1,9 @@
 /.gradle
 /build
 /web
+/mmo/build
+/mmo/js/build
+/mmo/jvm/build
 /mmo-backend/build
 /mmo-poc-common/build
 /mmo-poc-js/build

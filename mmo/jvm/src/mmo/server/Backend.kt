@@ -98,16 +98,20 @@ fun websocketWriteProcess(
 }
 
 suspend fun DefaultWebSocketServerSession.websocketReadProcess(user: User) {
-    while (true) {
-        val packet =
-            incoming.receivePacket() as? ClientPacket ?: error("Trying to send an invalid packet")
-        when (packet) {
-            is Say -> {
-                // Everyone on the room will read the text
-                user.container?.send(EntitySay(user.id, packet.text))
+    try {
+        while (true) {
+            val packet =
+                incoming.receivePacket() as? ClientPacket ?: error("Trying to send an invalid packet")
+            when (packet) {
+                is Say -> {
+                    // Everyone on the room will read the text
+                    user.container?.send(EntitySay(user.id, packet.text))
+                }
             }
+            println(packet)
         }
-        println(packet)
+    } catch (e: ClosedReceiveChannelException) {
+        // Do nothing!
     }
 }
 

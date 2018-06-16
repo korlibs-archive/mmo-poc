@@ -1,14 +1,17 @@
 package mmo.client
 
+import com.soywiz.klock.*
 import com.soywiz.korge.*
 import com.soywiz.korge.render.*
 import com.soywiz.korge.resources.*
 import com.soywiz.korge.scene.*
+import com.soywiz.korge.tween.*
 import com.soywiz.korge.view.*
 import com.soywiz.korinject.*
 import com.soywiz.korio.async.*
 import com.soywiz.korio.lang.*
 import com.soywiz.korio.net.ws.*
+import com.soywiz.korma.geom.*
 import mmo.protocol.*
 import kotlin.coroutines.experimental.*
 import kotlin.reflect.*
@@ -27,8 +30,10 @@ open class MmoModule : Module() {
 }
 
 class CharacterSkin(val base: Texture) {
-    val ROWS = 4
-    val COLS = 3
+    companion object {
+        val ROWS = 4
+        val COLS = 3
+    }
     val cellWidth = base.width / COLS
     val cellHeight = base.height / ROWS
     val items = (0 until ROWS).map { row ->
@@ -42,6 +47,7 @@ class CharacterSkin(val base: Texture) {
 class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
     val queue = AsyncThread()
     val skins = LinkedHashMap<String, CharacterSkin>()
+    val emptySkin = CharacterSkin(views.transparentTexture)
 
     suspend fun getSkin(skinName: String): CharacterSkin = queue {
         val texture = try { resourcesRoot["chara/$skinName.png"].readTexture(views.ag) } catch (e: Throwable) { views.transparentTexture }
@@ -51,6 +57,10 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
     }
 }
 
+enum class CharDirection(val id: Int) {
+    UP(0), RIGHT(1), DOWN(2), LEFT(3)
+}
+
 class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineContext, val id: Long, val views: Views) {
     val image = views.image(views.transparentTexture)
     val text = views.text("", textSize = 8.0)
@@ -58,18 +68,42 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
         addChild(image)
         addChild(text)
     }
-    var skin: CharacterSkin? = null
+    var skin: CharacterSkin = rm.emptySkin
 
     fun setSkin(skinName: String) {
         launch(coroutineContext) {
             skin = rm.getSkin(skinName)
-            image.tex = skin?.get(0, 0) ?: views.transparentTexture
+            image.tex = skin[0, 0]
         }
     }
 
     fun setPos(x: Double, y: Double) {
+        moving?.cancel()
         view.x = x
         view.y = y
+    }
+
+    var moving: Promise<Unit>? = null
+
+    fun move(src: Point2d, dst: Point2d, totalTime: TimeSpan) {
+        moving?.cancel()
+        view.x = src.x
+        view.y = src.y
+        moving = launch(coroutineContext) {
+            println("move $src, $dst, time=$totalTime")
+            view.tween(view::x[src.x, dst.x], view::y[src.y, dst.y], time = totalTime) { step ->
+                val elapsed = totalTime.seconds * step
+                val frame = (elapsed / 0.1).toInt()
+                val direction = when {
+                    dst.x > src.x -> CharDirection.RIGHT
+                    dst.x < src.x -> CharDirection.LEFT
+                    dst.y < src.y -> CharDirection.UP
+                    dst.y > src.y -> CharDirection.DOWN
+                    else -> CharDirection.RIGHT
+                }
+                image.tex = skin[direction.id, frame % CharacterSkin.COLS]
+            }
+        }
     }
 
     var sayPromise: Promise<Unit>? = null
@@ -116,7 +150,7 @@ class MainScene(
                     }
                     is EntityMove -> {
                         val entity = entitiesById[packet.entityId]
-                        entity?.setPos(packet.dstX, packet.dstY)
+                        entity?.move(Point2d(packet.srcX, packet.srcY), Point2d(packet.dstX, packet.dstY), packet.totalTime.seconds)
                     }
                     is EntitySay -> {
                         val entity = entitiesById[packet.entityId]
