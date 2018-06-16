@@ -1,9 +1,7 @@
 package mmo.server
 
 import com.soywiz.klock.*
-import com.soywiz.korge.scene.*
 import com.soywiz.korma.geom.*
-import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.experimental.*
 import mmo.protocol.*
 import java.util.concurrent.*
@@ -88,7 +86,7 @@ abstract class Actor() : Entity() {
     }
 
     suspend fun say(text: String) {
-        container?.send(Said(id, text))
+        container?.send(EntitySay(id, text))
     }
 
     suspend fun lookAt(entity: Entity) {

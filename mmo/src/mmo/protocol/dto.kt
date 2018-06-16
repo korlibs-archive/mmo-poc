@@ -17,7 +17,7 @@ interface ServerPacket : BasePacket
 @Serializable data class EntityAppear(val entityId: Long, val x: Double, val y: Double, val skin: String) : ServerPacket
 @Serializable data class EntityDisappear(val entityId: Long) : ServerPacket
 
-@Serializable data class Said(val entityId: Long, val text: String) : ServerPacket
+@Serializable data class EntitySay(val entityId: Long, val text: String) : ServerPacket
 @Serializable data class EntityMove(
     val entityId: Long,
     val srcX: Double,

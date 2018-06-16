@@ -10,6 +10,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.sessions.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.*
 import mmo.protocol.*
 import mmo.server.script.*
@@ -44,6 +45,7 @@ fun main(args: Array<String>) {
 
         routing {
             webSocket("/") {
+                delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
                 val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
 
                 val user = User(object : PacketSendChannel {
@@ -96,7 +98,7 @@ suspend fun DefaultWebSocketServerSession.websocketReadProcess(user: User) {
         when (packet) {
             is Say -> {
                 // Everyone on the room will read the text
-                user.container?.send(Said(user.id, packet.text))
+                user.container?.send(EntitySay(user.id, packet.text))
             }
         }
         println(packet)

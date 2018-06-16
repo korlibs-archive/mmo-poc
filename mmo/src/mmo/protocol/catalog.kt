@@ -5,7 +5,7 @@ package mmo.protocol
 val types = listOf(
     Say::class,
 
-    Said::class,
+    EntitySay::class,
     SetUserId::class,
     EntityAppear::class,
     EntityDisappear::class,
