@@ -10,7 +10,7 @@ data class Packet(val type: String, val payload: String)
 //val KClass<*>.serialName get() = this.simpleName
 val KClass<*>.serialName get() = serializer().serialClassDesc.name
 
-val typesByName = types.associateBy { it.serialName }
+val typesByName = serializableClasses.associateBy { it.serialName }
 
 fun <T : Any> serializePacket(obj: T, clazz: KClass<T>): String {
     return JSON.stringify(Packet(clazz.serialName, JSON.stringify(clazz.serializer(), obj)))

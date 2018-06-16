@@ -16,7 +16,8 @@ class Princess() : Npc() {
             moveTo(100, 50)
             wait(0.5.seconds)
             moveTo(0, 50)
-            say("Will someone come?")
+            val people = container?.entities?.size ?: 0
+            say("Will someone else come?\nWe are already $people!")
             wait(1.seconds)
         }
     }

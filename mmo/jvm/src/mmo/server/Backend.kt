@@ -5,6 +5,7 @@ import io.ktor.application.*
 import io.ktor.content.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.http.cio.websocket.Frame
+import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -50,7 +51,7 @@ fun main(args: Array<String>) {
 
                 val user = User(object : PacketSendChannel {
                     override fun send(packet: ServerPacket) {
-                        println("OFFERING: $packet")
+                        //println("OFFERING: $packet")
                         sendQueue.offer(packet)
                     }
                 })
@@ -65,7 +66,12 @@ fun main(args: Array<String>) {
                 } finally {
                     mainScene.remove(user)
                 }
+            }
 
+            get("/") {
+                if (webFolder != null) {
+                    call.respondFile(webFolder["index.html"])
+                }
             }
 
             static("/") {
@@ -85,7 +91,7 @@ fun websocketWriteProcess(
 ) {
     kotlinx.coroutines.experimental.launch(coroutineContext) {
         sendChannel.consumeEach { message ->
-            println("SENDING MESSAGE: $message to ${user.id}")
+            //println("SENDING MESSAGE: $message to ${user.id}")
             ws.outgoing.sendPacket(message)
         }
     }

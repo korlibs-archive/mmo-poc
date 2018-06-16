@@ -13,7 +13,7 @@ import mmo.protocol.*
 import kotlin.coroutines.experimental.*
 import kotlin.reflect.*
 
-fun main(args: Array<String>) = Korge(MmoModule())
+data class ServerEndPoint(val endpoint: String)
 
 open class MmoModule : Module() {
     override val mainScene = MainScene::class
@@ -53,7 +53,7 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
 
 class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineContext, val id: Long, val views: Views) {
     val image = views.image(views.transparentTexture)
-    val text = views.text("")
+    val text = views.text("", textSize = 8.0)
     val view = views.container().apply {
         addChild(image)
         addChild(text)
@@ -97,7 +97,7 @@ class MainScene(
 
     suspend fun init() {
         try {
-            ws = WebSocketClient("ws://127.0.0.1:8080/")
+            ws = WebSocketClient((injector.getOrNull<ServerEndPoint>() ?: ServerEndPoint("ws://127.0.0.1:8080/")).endpoint)
             ws?.onStringMessage?.invoke { str ->
                 val packet = deserializePacket(str)
                 println("CLIENT RECEIVED: $packet")
