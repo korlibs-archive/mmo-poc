@@ -4,8 +4,10 @@ import com.soywiz.klock.*
 import com.soywiz.korma.geom.*
 import com.soywiz.korma.interpolation.*
 import kotlinx.coroutines.experimental.*
+import kotlinx.coroutines.experimental.channels.*
 import mmo.protocol.*
 import java.util.concurrent.*
+import kotlin.collections.set
 
 open class Entity() {
     var container: EntityContainer? = null
@@ -31,6 +33,16 @@ interface PacketSendChannel {
 }
 
 open class User(val sc: PacketSendChannel) : Actor(), PacketSendChannel by sc {
+    val bag = LinkedHashMap<String, Int>()
+
+    fun getItemAmount(kind: String): Int = bag[kind] ?: 0
+
+    fun addItems(kind: String, amount: Int) {
+        bag.getOrPut(kind) { 0 }
+        val newValue = bag[kind]!! + amount
+        bag[kind] = newValue
+        sc.send(UserBagUpdate(kind, newValue))
+    }
 }
 
 class NpcConversation(val npc: Npc, val user: User) {
@@ -40,31 +52,56 @@ class NpcConversation(val npc: Npc, val user: User) {
 
     val id = lastId++
 
+    init {
+        npc.conversationsById[id] = this
+    }
+
+    val onUserSelection = Channel<Int>()
+
     class Option<T>(val title: String, val callback: suspend NpcConversation.() -> T)
 
     init {
         user.send(ConversationStart(id, npc.id))
     }
 
-    suspend fun mood(mood: String) {
+    var mood: String = "normal"
+
+    fun mood(mood: String) {
+        this.mood = mood
         user.send(ConversationMoodSet(id, mood))
     }
 
-    suspend fun say(text: String) {
-        user.send(ConversationText(id, text))
+    suspend fun mood(mood: String, callback: suspend () -> Unit) {
+        val oldMood = this.mood
+        mood(mood)
+        try {
+            callback()
+        } finally {
+            mood(oldMood)
+        }
     }
 
-    suspend fun <T> options(text: String, vararg option: Option<T>): T {
-        user.send(ConversationOptions(id, text, option.map { it.title }))
-        TODO()
+    suspend fun say(text: String) {
+        //user.send(ConversationText(id, text))
+        //onUserSelection.waitOne()
+        options(text, Option("Next") { })
+    }
+
+    suspend fun <T> options(text: String, vararg options: Option<T>): T {
+        user.send(ConversationOptions(id, text, options.map { it.title }))
+        val selection = onUserSelection.receive()
+        return options.getOrNull(selection)?.callback?.invoke(this) ?: error("Invalid user selection")
     }
 
     suspend fun close() {
         user.send(ConversationClose(id))
+        npc.conversationsById.remove(id)
     }
 }
 
 abstract class Npc() : Actor() {
+    val conversationsById = LinkedHashMap<Long, NpcConversation>()
+
     suspend fun conversationWith(user: User, callback: suspend NpcConversation.() -> Unit) {
         val conversation = NpcConversation(this, user)
         callback(conversation)
@@ -109,9 +146,11 @@ abstract class Actor() : Entity() {
         this.timeEnd = 0L
     }
 
+    suspend fun moveBy(dx: Number, dy: Number) = moveTo(getCurrentPosition() + Point2d(dx, dy))
+
     suspend fun moveTo(x: Number, y: Number) = moveTo(Point2d(x, y))
 
-    fun getInterpolatedPosition(now: Long): Point2d {
+    fun getCurrentPosition(now: Long = System.currentTimeMillis()): Point2d {
         if (now > timeEnd) return dst
         val elapsedTime = now - timeStart
         val ratio = elapsedTime.toDouble() / totalTime.toDouble()
@@ -125,7 +164,7 @@ abstract class Actor() : Entity() {
         val now = System.currentTimeMillis()
         val dist = (src - point).length
         val time = dist / speed
-        val currentSrc = getInterpolatedPosition(now)
+        val currentSrc = getCurrentPosition(now)
         src = currentSrc.copy()
         timeStart = now
         timeEnd = now + (time.seconds).milliseconds
@@ -135,8 +174,13 @@ abstract class Actor() : Entity() {
         src = dst
     }
 
-    suspend fun say(text: String) {
-        container?.send(EntitySay(id, text))
+    suspend fun say(text: String, vararg args: Any?) {
+        val formattedText = try {
+            text.format(*args)
+        } catch (e: Throwable) {
+            text
+        }
+        container?.send(EntitySay(id, formattedText))
     }
 
     suspend fun lookAt(entity: Entity) {

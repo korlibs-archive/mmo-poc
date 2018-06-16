@@ -16,9 +16,18 @@ data class ClientSay(val text: String) : ClientPacket
 @Serializable
 data class ClientRequestMove(val x: Double, val y: Double) : ClientPacket
 
+@Serializable
+data class ClientRequestInteract(val entityId: Long) : ClientPacket
+
+@Serializable
+data class ClientInteractionResult(val entityId: Long, val interactionId: Long, var selection: Int) : ClientPacket
+
 // Server Packets
 @Serializable
-data class SetUserId(val entityId: Long) : ServerPacket
+data class UserSetId(val entityId: Long) : ServerPacket
+
+@Serializable
+data class UserBagUpdate(val item: String, val amount: Int) : ServerPacket
 
 @Serializable
 data class EntityAppear(val entityId: Long, val x: Double, val y: Double, val skin: String) : ServerPacket
@@ -59,15 +68,25 @@ data class ConversationOptions(val id: Long, val text: String, val options: List
 
 // @TODO: It is possible to list @Serializable classes?
 val serializableClasses = listOf(
+    // Client
     ClientSay::class,
+    ClientRequestInteract::class,
     ClientRequestMove::class,
+    ClientInteractionResult::class,
 
-    SetUserId::class,
+    // Server
+
+    // To the user
+    UserSetId::class,
+    UserBagUpdate::class,
+
+    // Entities
     EntityAppear::class,
     EntityDisappear::class,
     EntitySay::class,
     EntityMove::class,
 
+    // Conversations
     ConversationStart::class,
     ConversationClose::class,
     ConversationMoodSet::class,

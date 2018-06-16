@@ -14,15 +14,17 @@ class Princess() : Npc() {
     override suspend fun script() {
         while (true) {
             moveTo(100, 50)
+            moveBy(0, 20)
             wait(0.5.seconds)
             moveTo(0, 50)
             val people = container?.entities?.size ?: 0
-            say("Will someone else come?\nWe are already $people!")
+            say("Will someone else come?\nWe are already %d!", people)
             wait(1.seconds)
         }
     }
 
     override suspend fun onUserInterfaction(user: User) {
+        val gold = "gold"
         lookAt(user)
         conversationWith(user) {
             mood("happy")
@@ -33,8 +35,19 @@ class Princess() : Npc() {
                     say("I am written using Kotlin coroutines inside [Ktor](https://ktor.io/).")
                     close()
                 },
-                NpcConversation.Option("Goodbye") {
-                    say("Goodbye")
+                NpcConversation.Option("Give me some money!") {
+                    if (user.getItemAmount(gold) >= 2000) {
+                        mood("angry") {
+                            say("*Sigh* You have enough money already!")
+                        }
+                        say("Goodbye!")
+                    } else {
+                        say("Sure, here we go!")
+                        user.addItems(gold, amount = 1000)
+                    }
+                    close()
+                },
+                NpcConversation.Option("Nothing, I'm ok!") {
                     close()
                 }
             )

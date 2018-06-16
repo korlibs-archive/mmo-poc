@@ -2,10 +2,12 @@ package mmo.client
 
 import com.soywiz.klock.*
 import com.soywiz.korge.component.*
+import com.soywiz.korge.html.*
 import com.soywiz.korge.input.*
 import com.soywiz.korge.render.*
 import com.soywiz.korge.resources.*
 import com.soywiz.korge.scene.*
+import com.soywiz.korge.service.*
 import com.soywiz.korge.tween.*
 import com.soywiz.korge.view.*
 import com.soywiz.korim.color.*
@@ -23,10 +25,12 @@ data class ServerEndPoint(val endpoint: String)
 
 open class MmoModule : Module() {
     override val mainScene = MainScene::class
+
     override suspend fun init(injector: AsyncInjector) {
         injector
-            .mapPrototype { MainScene(get()) }
+            .mapPrototype { MainScene(get(), get()) }
             .mapSingleton { ResourceManager(get(), get()) }
+            .mapSingleton { Browser(get()) }
             //.mapPrototype { MainScene(get()) }
             //.mapSingleton { ConnectionService() }
     }
@@ -69,7 +73,7 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
         anchorX = 0.5
         anchorY = 1.0
     }
-    val text = views.text("", textSize = 8.0)
+    val text = views.text("", textSize = 8.0).apply { autoSize = true }
     val view = views.container().apply {
         addChild(image)
         addChild(text)
@@ -85,6 +89,7 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
 
     fun setPos(x: Double, y: Double) {
         moving?.cancel()
+        moving = null
         view.x = x
         view.y = y
     }
@@ -121,14 +126,36 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
         sayPromise?.cancel()
         this.text.text = text
         sayPromise = launch(coroutineContext) {
-            sleepMs(1000)
+            sleepMs(2000)
             this.text.text = ""
         }
     }
 }
 
+class ClientNpcConversation(val overlay: Container, val npcId: Long, val conversationId: Long, val ws: WebSocketClient) {
+    val views = overlay.views
+
+    fun setMood(mood: String) {
+    }
+
+    fun options(text: String, options: List<String>) {
+        overlay.removeChildren()
+        overlay += views.solidRect(1280, 720, RGBAf(0, 0, 0, 0.75).rgba)
+        overlay += views.text(text, textSize = 24.0).apply { y = 48.0; autoSize = true }
+        for ((index, option) in options.withIndex()) {
+            overlay += views.simpleButton(640, 48, option, {
+                overlay.removeChildren()
+                ws.sendPacket(ClientInteractionResult(npcId, conversationId, index))
+            }).apply {
+                y = ((index + 2) * 48).toDouble()
+            }
+        }
+    }
+}
+
 class MainScene(
-    val rm: ResourceManager
+    val rm: ResourceManager,
+    val browser: Browser
 ) : Scene() {
     var ws: WebSocketClient? = null
     val entitiesById = LinkedHashMap<Long, ClientEntity>()
@@ -140,6 +167,12 @@ class MainScene(
             sceneView += this
         }
     }
+    val conversationOverlay by lazy {
+        views.container().apply {
+            sceneView += this
+        }
+    }
+    val conversationsById = LinkedHashMap<Long, ClientNpcConversation>()
 
     suspend fun init() {
         try {
@@ -149,7 +182,13 @@ class MainScene(
                 println("CLIENT RECEIVED: $packet")
                 when (packet) {
                     is EntityAppear -> {
-                        val entity = entitiesById.getOrPut(packet.entityId) { ClientEntity(rm, coroutineContext, packet.entityId, views) }
+                        val entity = entitiesById.getOrPut(packet.entityId) {
+                            ClientEntity(rm, coroutineContext, packet.entityId, views).apply {
+                                this.view.onClick {
+                                    ws?.sendPacket(ClientRequestInteract(id))
+                                }
+                            }
+                        }
 
                         entity.apply {
                             setSkin(packet.skin)
@@ -170,6 +209,24 @@ class MainScene(
                         val entity = entitiesById[packet.entityId]
                         entity?.say(packet.text)
                     }
+                    is ConversationStart -> {
+                        conversationsById[packet.id] = ClientNpcConversation(conversationOverlay, packet.npcId, packet.id, ws!!)
+                    }
+                    is ConversationClose -> {
+                        conversationsById.remove(packet.id)
+                    }
+                    is ConversationMoodSet -> {
+                        val conversation = conversationsById[packet.id]
+                        conversation?.setMood(packet.mood)
+                    }
+                    is ConversationOptions -> {
+                        val conversation = conversationsById[packet.id]
+                        conversation?.options(packet.text, packet.options)
+                    }
+                    is UserBagUpdate -> {
+                        bag[packet.item] = packet.amount
+                        bagUpdated()
+                    }
                 }
             }
         } catch (e: Throwable) {
@@ -177,8 +234,17 @@ class MainScene(
         }
     }
 
+    val bag = LinkedHashMap<String, Int>()
+
+    fun bagUpdated() {
+        val gold = bag["gold"] ?: 0
+        moneyText.text = "Gold: $gold"
+    }
+
     suspend inline fun <reified T : Any> send(packet: T) = run { ws?.sendPacket(packet, T::class) }
     suspend fun receive(): Any? = ws?.receivePacket()
+
+    lateinit var moneyText: Text
 
     override suspend fun sceneInit(sceneView: Container) {
         init()
@@ -192,7 +258,33 @@ class MainScene(
                 entityContainer.children.sortBy { it.y }
             }
         })
+        entityContainer
+        conversationOverlay
+        sceneView.addChild(views.simpleButton(64, 48, "SAY") {
+            val text = browser.prompt("What to say?", "")
+            ws?.sendPacket(ClientSay(text))
+        })
+        moneyText = views.text("", textSize = 24.0).apply {
+            autoSize = true
+            x = 128.0
+            sceneView += this
+        }
+        bagUpdated()
     }
+}
+
+fun Views.simpleButton(width: Int, height: Int, title: String, click: suspend () -> Unit): Container {
+    val out = container().apply {
+        val text = text(title, textSize = 32.0)
+        text.format = Html.Format(align = Html.Alignment.MIDDLE_CENTER, size = 26)
+        text.textBounds.setTo(0, 0, width, height)
+        addChild(views.solidRect(width, height, RGBA(0xa0, 0xa0, 0xff, 0x7f)))
+        addChild(text)
+        onClick {
+            click()
+        }
+    }
+    return out
 }
 
 suspend fun <T : Any> WebSocketClient.sendPacket(obj: T, clazz: KClass<T> = obj::class as KClass<T>) {

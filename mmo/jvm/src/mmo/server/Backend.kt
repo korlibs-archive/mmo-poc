@@ -1,12 +1,10 @@
 package mmo.server
 
 import com.soywiz.korio.*
-import com.soywiz.korma.*
 import io.ktor.application.*
 import io.ktor.content.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.http.cio.websocket.Frame
-import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -62,7 +60,7 @@ fun main(args: Array<String>) {
                     }
 
                     websocketWriteProcess(coroutineContext, this, user, sendQueue)
-                    user.send(SetUserId(user.id))
+                    user.send(UserSetId(user.id))
 
                     try {
                         mainScene.add(user)
@@ -101,6 +99,7 @@ fun websocketWriteProcess(
 suspend fun DefaultWebSocketServerSession.websocketReadProcess(user: User) {
     try {
         var moveJob: Job? = null
+        var interfactionJob: Job? = null
         while (true) {
             val packet = incoming.receivePacket() as? ClientPacket ?: error("Trying to send an invalid packet")
             when (packet) {
@@ -112,6 +111,23 @@ suspend fun DefaultWebSocketServerSession.websocketReadProcess(user: User) {
                     moveJob?.cancel()
                     moveJob = launch {
                         user.moveTo(packet.x, packet.y)
+                    }
+                }
+                is ClientRequestInteract -> {
+                    val entity = user.container?.entities?.firstOrNull { it.id == packet.entityId }
+                    if (entity is Npc) {
+                        interfactionJob = launch {
+                            entity.onUserInterfaction(user)
+                        }
+                    }
+                }
+                is ClientInteractionResult -> {
+                    val entity = user.container?.entities?.firstOrNull { it.id == packet.entityId }
+                    if (entity is Npc) {
+                        val conversation = entity.conversationsById[packet.interactionId]
+                        if (conversation != null && conversation.user == user) {
+                            conversation.onUserSelection.offer(packet.selection)
+                        }
                     }
                 }
             }
