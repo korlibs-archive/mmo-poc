@@ -16,6 +16,8 @@ buildscript {
     }
 }
 
+apply plugin: 'idea'
+
 subprojects {
     repositories {
         mavenLocal()
@@ -24,5 +26,15 @@ subprojects {
         maven { url "https://dl.bintray.com/kotlin/ktor" }
         maven { url "https://dl.bintray.com/soywiz/soywiz" }
         maven { url "https://kotlin.bintray.com/kotlinx" }
+    }
+}
+
+task runAll(dependsOn: [":mmo:js:buildAndCopy", ":mmo:jvm:runServer"]) {
+
+}
+
+idea {
+    module {
+        excludeDirs = [file(web_dir)]
     }
 }

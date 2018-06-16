@@ -11,6 +11,7 @@ import com.soywiz.korio.lang.*
 import com.soywiz.korio.net.ws.*
 import mmo.protocol.*
 import kotlin.coroutines.experimental.*
+import kotlin.reflect.*
 
 fun main(args: Array<String>) = Korge(MmoModule())
 
@@ -41,7 +42,7 @@ class ConnectionService : AsyncDependency {
         }
     }
 
-    suspend inline fun <reified T : Any> send(packet: T) = run { ws?.sendPacket(packet) }
+    suspend inline fun <reified T : Any> send(packet: T) = run { ws?.sendPacket(packet, T::class) }
     suspend fun receive(): Any? = ws?.receivePacket()
 }
 
@@ -69,8 +70,8 @@ class MainScene(
     }
 }
 
-suspend inline fun <reified T : Any> WebSocketClient.sendPacket(obj: T) {
-    this.send(serializePacket(obj))
+suspend fun <T : Any> WebSocketClient.sendPacket(obj: T, clazz: KClass<T>) {
+    this.send(serializePacket(obj, clazz))
 }
 
 suspend fun WebSocketClient.receivePacket(): Any {

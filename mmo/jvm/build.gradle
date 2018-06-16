@@ -51,3 +51,5 @@ task runServer(type: JavaExec) {
     main = "mmo.server.BackendKt"
     args ""
 }
+
+kotlin.experimental.coroutines "enable"

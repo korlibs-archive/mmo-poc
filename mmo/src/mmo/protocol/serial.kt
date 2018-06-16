@@ -12,11 +12,11 @@ val KClass<*>.serialName get() = serializer().serialClassDesc.name
 
 val typesByName = types.associateBy { it.serialName }
 
-inline fun <reified T : Any> serializePacket(obj: T): String {
-    return JSON.stringify(Packet(obj::class.serialName!!, JSON.stringify(obj)))
+fun <T : Any> serializePacket(obj: T, clazz: KClass<T>): String {
+    return JSON.stringify(Packet(clazz.serialName, JSON.stringify(clazz.serializer(), obj)))
 }
 
-inline fun deserializePacket(str: String): Any {
+inline fun deserializePacket(str: String): BasePacket {
     val packet = JSON.parse(Packet::class.serializer(), str)
     val clazz = typesByName[packet.type]
             ?: error("Class '${packet.type}' is not available for serializing :: available=${typesByName.keys}")
