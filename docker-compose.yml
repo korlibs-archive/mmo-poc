@@ -4,6 +4,8 @@ services:
   site:
     build:
       context: ./
+    volumes:
+      - $PWD:/root:ro
     networks:
       - reverse-proxy
     restart: always

@@ -109,7 +109,6 @@ abstract class Actor() : Entity() {
         this.timeEnd = 0L
     }
 
-
     suspend fun moveTo(x: Number, y: Number) = moveTo(Point2d(x, y))
 
     fun getInterpolatedPosition(now: Long): Point2d {

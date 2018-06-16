@@ -181,6 +181,7 @@ class MainScene(
         init()
         entityContainer.onClick {
             val pos = it.currentPos
+            println("CLICK")
             ws?.sendPacket(ClientRequestMove(pos.x, pos.y))
         }
         entityContainer.addComponent(object : Component(entityContainer) {

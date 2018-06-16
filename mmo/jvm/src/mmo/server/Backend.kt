@@ -46,42 +46,38 @@ fun main(args: Array<String>) {
         mainScene.add(Princess().apply { start() })
 
         routing {
-            webSocket("/") {
-                delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
-                val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
-
-                val user = User(object : PacketSendChannel {
-                    override fun send(packet: ServerPacket) {
-                        //println("OFFERING: $packet")
-                        sendQueue.offer(packet)
-                    }
-                }).apply {
-                    this.src = com.soywiz.korma.geom.Point2d(25.0, 25.0)
-                }
-
-                websocketWriteProcess(coroutineContext, this, user, sendQueue)
-                user.send(SetUserId(user.id))
-
-                try {
-                    mainScene.add(user)
-                    user.sendAllEntities(user.container)
-                    websocketReadProcess(user)
-                } finally {
-                    mainScene.remove(user)
-                }
-            }
-
-            get("/") {
-                if (webFolder != null) {
-                    call.respondFile(webFolder["index.html"])
-                    finish()
-                }
-            }
-
             static("/") {
-                if (webFolder != null) files(webFolder)
-                resources()
-                default("index.html")
+                webSocket {
+                    delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
+                    val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
+
+                    val user = User(object : PacketSendChannel {
+                        override fun send(packet: ServerPacket) {
+                            //println("OFFERING: $packet")
+                            sendQueue.offer(packet)
+                        }
+                    }).apply {
+                        this.setPositionTo(25, 25)
+                    }
+
+                    websocketWriteProcess(coroutineContext, this, user, sendQueue)
+                    user.send(SetUserId(user.id))
+
+                    try {
+                        mainScene.add(user)
+                        user.sendAllEntities(user.container)
+                        websocketReadProcess(user)
+                    } finally {
+                        mainScene.remove(user)
+                    }
+                }
+
+                if (webFolder != null) {
+                    default(File(webFolder, "index.html"))
+                    files(webFolder)
+                } else {
+                    resources()
+                }
             }
         }
     }.start(wait = true)
