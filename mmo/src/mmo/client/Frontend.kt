@@ -97,21 +97,22 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
         view.y = src.y
         moving = launch(coroutineContext) {
             println("move $src, $dst, time=$totalTime")
+            val dx = (dst.x - src.x).absoluteValue
+            val dy = (dst.y - src.y).absoluteValue
+            val horizontal = dx >= dy
+            val direction = when {
+                horizontal && dst.x >= src.x -> CharDirection.RIGHT
+                horizontal && dst.x < src.x -> CharDirection.LEFT
+                !horizontal && dst.y < src.y -> CharDirection.UP
+                !horizontal && dst.y >= src.y -> CharDirection.DOWN
+                else -> CharDirection.RIGHT
+            }
             view.tween(view::x[src.x, dst.x], view::y[src.y, dst.y], time = totalTime) { step ->
                 val elapsed = totalTime.seconds * step
                 val frame = (elapsed / 0.1).toInt()
-                val dx = (dst.x - src.x).absoluteValue
-                val dy = (dst.y - src.y).absoluteValue
-                val horizontal = dx >= dy
-                val direction = when {
-                    horizontal && dst.x >= src.x -> CharDirection.RIGHT
-                    horizontal && dst.x < src.x -> CharDirection.LEFT
-                    !horizontal && dst.y < src.y -> CharDirection.UP
-                    !horizontal && dst.y >= src.y -> CharDirection.DOWN
-                    else -> CharDirection.RIGHT
-                }
                 image.tex = skin[direction.id, frame % CharacterSkin.COLS]
             }
+            image.tex = skin[direction.id, 1]
         }
     }
 
@@ -148,7 +149,9 @@ class MainScene(
                 println("CLIENT RECEIVED: $packet")
                 when (packet) {
                     is EntityAppear -> {
-                        ClientEntity(rm, coroutineContext, packet.entityId, views).apply {
+                        val entity = entitiesById.getOrPut(packet.entityId) { ClientEntity(rm, coroutineContext, packet.entityId, views) }
+
+                        entity.apply {
                             setSkin(packet.skin)
                             setPos(packet.x, packet.y)
                             entityContainer.addChild(view)

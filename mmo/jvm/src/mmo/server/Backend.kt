@@ -57,6 +57,7 @@ fun main(args: Array<String>) {
                             sendQueue.offer(packet)
                         }
                     }).apply {
+                        this.skin = "user0"
                         this.setPositionTo(25, 25)
                     }
 
