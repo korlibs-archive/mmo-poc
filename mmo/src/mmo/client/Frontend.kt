@@ -18,6 +18,7 @@ import com.soywiz.korio.lang.*
 import com.soywiz.korio.net.ws.*
 import com.soywiz.korma.geom.*
 import com.soywiz.korma.interpolation.*
+import com.soywiz.korui.light.*
 import mmo.protocol.*
 import mmo.shared.*
 import kotlin.coroutines.experimental.*
@@ -30,6 +31,8 @@ open class MmoModule : Module() {
     override val mainScene = MmoMainScene::class
     override val size: SizeInt get() = SizeInt(1280, 720)
     override val windowSize: SizeInt get() = SizeInt(1280, 720)
+    //override val quality: LightQuality = LightQuality.QUALITY
+    override val quality: LightQuality = LightQuality.PERFORMANCE
 
     override suspend fun init(injector: AsyncInjector) {
         injector
