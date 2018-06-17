@@ -3,6 +3,8 @@
 MMO Kotlin fullstack development. Server is done using [Ktor](https://ktor.io/) and client is done using [Korge](https://github.com/korlibs/korlibs),
 and both communicate by serializing using [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization).
 
+![](/docs/screenshot.png)
+
 ### QuickStart
 
 1. Execute `./gradlew runAll`
