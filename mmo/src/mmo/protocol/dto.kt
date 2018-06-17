@@ -12,10 +12,10 @@ interface ServerPacket : BasePacket
 
 // Client/Server Packets
 @Serializable
-class Ping(val pingTime: Long) : ClientPacket, ServerPacket
+data class Ping(val pingTime: Long) : ClientPacket, ServerPacket
 
 @Serializable
-class Pong(val pingTime: Long) : ClientPacket, ServerPacket
+data class Pong(val pingTime: Long) : ClientPacket, ServerPacket
 
 // Client Packets
 @Serializable
