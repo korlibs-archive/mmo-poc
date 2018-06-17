@@ -64,14 +64,14 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
     val emptySkin = CharacterSkin(views.transparentTexture)
 
     suspend fun getSkin(skinName: String): CharacterSkin = queue {
-        val texture = try {
-            resourcesRoot["chara/$skinName.png"].readTexture(views.ag)
-        } catch (e: Throwable) {
-            views.transparentTexture
+        skins.getOrPut(skinName) {
+            val texture = try {
+                resourcesRoot["chara/$skinName.png"].readTexture(views.ag)
+            } catch (e: Throwable) {
+                views.transparentTexture
+            }
+            CharacterSkin(texture)
         }
-        val skin = CharacterSkin(texture)
-        skins[skinName] = skin
-        skin
     }
 }
 
