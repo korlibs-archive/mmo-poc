@@ -20,7 +20,7 @@ and both communicate by serializing using [kotlinx.serialization](https://github
 ### Technical details
 
 NPCs and server scripts are defined using Kotlin coroutines.
-Check an example of NPC here: [Princess.kt](https://github.com/mmo-poc/mmo-poc/blob/618db85851d0a4a0db39ba0b4be72e08fad079b9/mmo/jvm/src/mmo/server/script/Princess.kt)
+Check an example of NPC here: [Princess.kt](https://github.com/mmo-poc/mmo-poc/blob/master/mmo/jvm/src/mmo/server/script/Princess.kt)
 
 Frontend is done using Korge and can run in JS or JVM.
 
