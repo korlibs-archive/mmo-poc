@@ -27,13 +27,13 @@ import kotlin.reflect.*
 data class ServerEndPoint(val endpoint: String)
 
 open class MmoModule : Module() {
-    override val mainScene = MainScene::class
+    override val mainScene = MmoMainScene::class
     override val size: SizeInt get() = SizeInt(1280, 720)
     override val windowSize: SizeInt get() = SizeInt(1280, 720)
 
     override suspend fun init(injector: AsyncInjector) {
         injector
-            .mapPrototype { MainScene(get(), get()) }
+            .mapPrototype { MmoMainScene(get(), get()) }
             .mapSingleton { ResourceManager(get(), get()) }
             .mapSingleton { Browser(get()) }
         //.mapPrototype { MainScene(get()) }
@@ -81,7 +81,7 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
         anchorX = 0.5
         anchorY = 1.0
     }
-    val text = views.text("", textSize = 8.0).apply { autoSize = true }
+    val text = views.text("", textSize = 8.0)
     val view = views.container().apply {
         addChild(image)
         addChild(text)
@@ -161,7 +161,7 @@ class ClientNpcConversation(
     fun options(text: String, options: List<String>) {
         overlay.removeChildren()
         overlay += views.solidRect(1280, 720, RGBAf(0, 0, 0, 0.75).rgba)
-        overlay += views.text(text, textSize = 48.0).apply { y = 128.0; autoSize = true }
+        overlay += views.text(text, textSize = 48.0).apply { y = 128.0 }
         val referenceY = (720 - options.size * 96).toDouble()
         for ((index, option) in options.withIndex()) {
             overlay += views.simpleButton(1280, 96, option, {
@@ -174,7 +174,7 @@ class ClientNpcConversation(
     }
 }
 
-class MainScene(
+class MmoMainScene(
     val rm: ResourceManager,
     val browser: Browser
 ) : Scene() {
@@ -332,12 +332,10 @@ class MainScene(
             ws?.sendPacket(ClientSay(text))
         })
         moneyText = views.text("", textSize = 48.0).apply {
-            autoSize = true
             x = 256.0
             sceneView += this
         }
         latencyText = views.text("", textSize = 48.0).apply {
-            autoSize = true
             x = 800.0
             sceneView += this
         }
