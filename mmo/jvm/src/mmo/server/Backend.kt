@@ -18,8 +18,6 @@ import java.io.*
 import kotlin.coroutines.experimental.*
 import kotlin.reflect.*
 
-class MySession(val userId: String)
-
 object Experiments {
     @JvmStatic fun main(args: Array<String>) {
         val packet = serializePacket(ClientSay("HELLO"), ClientSay::class)
@@ -31,9 +29,6 @@ object Experiments {
 fun main(args: Array<String>) {
     embeddedServer(Netty, port = 8080) {
         install(WebSockets)
-        install(Sessions) {
-            cookie<MySession>("oauthSampleSessionId")
-        }
 
         val webFolder =
             listOf(".", "..", "../..", "../../..").map { File(it).absoluteFile["web"] }.firstOrNull { it.exists() }

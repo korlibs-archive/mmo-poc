@@ -78,8 +78,8 @@ class Princess(scene: ServerScene) : Npc() {
                     close()
                 }
                 if (!leversInPosition) {
-                    println("expectedLeversDirection=$expectedLeversDirection")
-                    println("actualLeversDirection=$actualLeversDirection")
+                    //println("expectedLeversDirection=$expectedLeversDirection")
+                    //println("actualLeversDirection=$actualLeversDirection")
                     option("What are those 8 levers?") {
                         say(
                             """
@@ -95,14 +95,14 @@ class Princess(scene: ServerScene) : Npc() {
                         )
                         say(
                             """
-                            Half of us, should look where most of the others
+                            Half of us, should turn where most of the others
                             are, while the other half should do the opposite.
                         """.trimIndent()
                         )
                         say(
                             """
                             But you can't do the same as the mates that are
-                            nearest to you.
+                            next to you.
                         """.trimIndent()
                         )
                         say(

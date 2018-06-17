@@ -28,6 +28,8 @@ data class ServerEndPoint(val endpoint: String)
 
 open class MmoModule : Module() {
     override val mainScene = MainScene::class
+    override val size: SizeInt get() = SizeInt(1280, 720)
+    override val windowSize: SizeInt get() = SizeInt(1280, 720)
 
     override suspend fun init(injector: AsyncInjector) {
         injector
@@ -159,13 +161,14 @@ class ClientNpcConversation(
     fun options(text: String, options: List<String>) {
         overlay.removeChildren()
         overlay += views.solidRect(1280, 720, RGBAf(0, 0, 0, 0.75).rgba)
-        overlay += views.text(text, textSize = 24.0).apply { y = 48.0; autoSize = true }
+        overlay += views.text(text, textSize = 48.0).apply { y = 128.0; autoSize = true }
+        val referenceY = (720 - options.size * 96).toDouble()
         for ((index, option) in options.withIndex()) {
-            overlay += views.simpleButton(640, 48, option, {
+            overlay += views.simpleButton(1280, 96, option, {
                 overlay.removeChildren()
                 ws.sendPacket(ClientInteractionResult(npcId, conversationId, index))
             }).apply {
-                y = ((index + 2) * 48).toDouble()
+                y = referenceY + (index * 96).toDouble()
             }
         }
     }
@@ -181,7 +184,7 @@ class MainScene(
     val entityContainer by lazy {
         views.container().apply {
             this += background
-            scale = 2.0
+            scale = 3.0
             sceneView += this
         }
     }
@@ -324,18 +327,18 @@ class MainScene(
         })
         entityContainer
         conversationOverlay
-        sceneView.addChild(views.simpleButton(64, 48, "SAY") {
+        sceneView.addChild(views.simpleButton(128, 96, "SAY") {
             val text = browser.prompt("What to say?", "")
             ws?.sendPacket(ClientSay(text))
         })
-        moneyText = views.text("", textSize = 24.0).apply {
+        moneyText = views.text("", textSize = 48.0).apply {
             autoSize = true
-            x = 128.0
+            x = 256.0
             sceneView += this
         }
-        latencyText = views.text("", textSize = 24.0).apply {
+        latencyText = views.text("", textSize = 48.0).apply {
             autoSize = true
-            x = 400.0
+            x = 800.0
             sceneView += this
         }
         bagUpdated()
@@ -344,7 +347,7 @@ class MainScene(
 
 fun Views.simpleButton(width: Int, height: Int, title: String, click: suspend () -> Unit): Container {
     val out = container().apply {
-        val text = text(title, textSize = 32.0)
+        val text = text(title, textSize = 64.0)
         text.format = Html.Format(align = Html.Alignment.MIDDLE_CENTER, size = 26)
         text.textBounds.setTo(0, 0, width, height)
         addChild(views.solidRect(width, height, RGBA(0xa0, 0xa0, 0xff, 0x7f)))
