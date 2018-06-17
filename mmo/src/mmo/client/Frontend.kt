@@ -347,8 +347,8 @@ class MainScene(
 
 fun Views.simpleButton(width: Int, height: Int, title: String, click: suspend () -> Unit): Container {
     val out = container().apply {
-        val text = text(title, textSize = 64.0)
-        text.format = Html.Format(align = Html.Alignment.MIDDLE_CENTER, size = 26)
+        val text = text(title, textSize = 52.0)
+        text.format = Html.Format(align = Html.Alignment.MIDDLE_CENTER, size = 52)
         text.textBounds.setTo(0, 0, width, height)
         addChild(views.solidRect(width, height, RGBA(0xa0, 0xa0, 0xff, 0x7f)))
         addChild(text)

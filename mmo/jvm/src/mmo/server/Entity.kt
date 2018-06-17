@@ -139,7 +139,7 @@ abstract class Npc : Actor() {
 
     abstract suspend fun script(): Unit
 
-    open suspend fun onUserInterfaction(user: User) {
+    open suspend fun onUserInteraction(user: User) {
     }
 
     suspend fun run() {

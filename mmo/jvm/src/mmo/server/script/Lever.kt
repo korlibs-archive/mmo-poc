@@ -29,7 +29,7 @@ class Lever(container: EntityContainer, val lever: Int, x: Int, y: Int) : Npc() 
             //println("$name: $on")
         }
 
-    override suspend fun onUserInterfaction(user: User) {
+    override suspend fun onUserInteraction(user: User) {
         on = !on
     }
 }

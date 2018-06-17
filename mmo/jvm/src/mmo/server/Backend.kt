@@ -8,7 +8,6 @@ import io.ktor.http.cio.websocket.Frame
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.sessions.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.*
@@ -112,7 +111,7 @@ suspend fun DefaultWebSocketServerSession.websocketReadProcess(user: User) {
                     val entity = user.container?.entities?.firstOrNull { it.id == packet.entityId }
                     if (entity is Npc) {
                         interfactionJob = launch {
-                            entity.onUserInterfaction(user)
+                            entity.onUserInteraction(user)
                         }
                     }
                 }

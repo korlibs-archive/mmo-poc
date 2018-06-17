@@ -52,7 +52,7 @@ class Princess(scene: ServerScene) : Npc() {
         }
     }
 
-    override suspend fun onUserInterfaction(user: User) {
+    override suspend fun onUserInteraction(user: User) {
         val gold = "gold"
         val experience = "experience"
         lookAt(user)
