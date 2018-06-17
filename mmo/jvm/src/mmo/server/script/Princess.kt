@@ -95,7 +95,7 @@ class Princess(scene: ServerScene) : Npc() {
                         )
                         say(
                             """
-                            Half of us, should turn where most of the others
+                            Half of us, should turn towards most of the others
                             are, while the other half should do the opposite.
                         """.trimIndent()
                         )
