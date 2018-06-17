@@ -1,6 +1,7 @@
 package mmo.client
 
 import com.soywiz.klock.*
+import com.soywiz.kmem.*
 import com.soywiz.korge.component.*
 import com.soywiz.korge.html.*
 import com.soywiz.korge.input.*
@@ -16,6 +17,7 @@ import com.soywiz.korio.async.*
 import com.soywiz.korio.lang.*
 import com.soywiz.korio.net.ws.*
 import com.soywiz.korma.geom.*
+import com.soywiz.korma.interpolation.*
 import mmo.protocol.*
 import mmo.shared.*
 import kotlin.coroutines.experimental.*
@@ -32,8 +34,8 @@ open class MmoModule : Module() {
             .mapPrototype { MainScene(get(), get()) }
             .mapSingleton { ResourceManager(get(), get()) }
             .mapSingleton { Browser(get()) }
-            //.mapPrototype { MainScene(get()) }
-            //.mapSingleton { ConnectionService() }
+        //.mapPrototype { MainScene(get()) }
+        //.mapSingleton { ConnectionService() }
     }
 }
 
@@ -42,6 +44,7 @@ class CharacterSkin(val base: Texture) {
         val ROWS = 4
         val COLS = 3
     }
+
     val cellWidth = base.width / COLS
     val cellHeight = base.height / ROWS
     val items = (0 until ROWS).map { row ->
@@ -49,6 +52,7 @@ class CharacterSkin(val base: Texture) {
             base.slice(cellWidth * column, cellHeight * row, cellWidth, cellHeight)
         }
     }
+
     operator fun get(row: Int, col: Int) = items[row][col]
 }
 
@@ -58,7 +62,11 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
     val emptySkin = CharacterSkin(views.transparentTexture)
 
     suspend fun getSkin(skinName: String): CharacterSkin = queue {
-        val texture = try { resourcesRoot["chara/$skinName.png"].readTexture(views.ag) } catch (e: Throwable) { views.transparentTexture }
+        val texture = try {
+            resourcesRoot["chara/$skinName.png"].readTexture(views.ag)
+        } catch (e: Throwable) {
+            views.transparentTexture
+        }
         val skin = CharacterSkin(texture)
         skins[skinName] = skin
         skin
@@ -137,7 +145,12 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
     }
 }
 
-class ClientNpcConversation(val overlay: Container, val npcId: Long, val conversationId: Long, val ws: WebSocketClient) {
+class ClientNpcConversation(
+    val overlay: Container,
+    val npcId: Long,
+    val conversationId: Long,
+    val ws: WebSocketClient
+) {
     val views = overlay.views
 
     fun setMood(mood: String) {
@@ -184,39 +197,60 @@ class MainScene(
             ws = WebSocketClient((injector.getOrNull() ?: ServerEndPoint("ws://127.0.0.1:8080/")).endpoint)
             ws?.onStringMessage?.invoke { str ->
                 val packet = deserializePacket(str)
-                println("CLIENT RECEIVED: $packet")
-                when (packet) {
-                    is EntityAppear -> {
-                        val entity = entitiesById.getOrPut(packet.entityId) {
-                            ClientEntity(rm, coroutineContext, packet.entityId, views).apply {
-                                this.view.onClick {
-                                    ws?.sendPacket(ClientRequestInteract(id))
-                                }
-                            }
-                        }
 
-                        entity.apply {
-                            setSkin(packet.skin)
-                            setPos(packet.x, packet.y)
-                            lookAt(packet.direction)
-                            entityContainer.addChild(view)
-                            entitiesById[id] = this
-                        }
-                    }
+                println("CLIENT RECEIVED: $packet")
+
+                when (packet) {
                     is EntityDisappear -> {
                         val entity = entitiesById.remove(packet.entityId)
                         entity?.view?.removeFromParent()
                     }
-                    is EntityMove -> {
-                        val entity = entitiesById[packet.entityId]
-                        entity?.move(Point2d(packet.srcX, packet.srcY), Point2d(packet.dstX, packet.dstY), packet.totalTime.seconds)
+                    is EntityUpdates -> {
+                        val now = packet.currentTime
+                        for (update in packet.updates) {
+                            val entity = entitiesById.getOrPut(update.entityId) {
+                                ClientEntity(rm, coroutineContext, update.entityId, views).apply {
+                                    view.onClick {
+                                        ws?.sendPacket(ClientRequestInteract(id))
+                                    }
+                                    entityContainer.addChild(view)
+                                    entitiesById[id] = this
+                                }
+                            }
+
+                            entity.setSkin(update.skin)
+                            entity.lookAt(update.direction)
+
+                            val elapsed = (now - update.srcTime).toDouble()
+                            val totalTime = (update.dstTime - update.srcTime).toDouble()
+
+                            //println("Update: $update")
+
+                            if (totalTime > 0) {
+                                val ratio = (if (totalTime > 0.0) elapsed / totalTime else 1.0).clamp(0.0, 1.0)
+
+                                val currentX = interpolate(update.srcX, update.dstX, ratio)
+                                val currentY = interpolate(update.srcY, update.dstY, ratio)
+
+                                val remainingTime = totalTime - elapsed
+
+                                entity.move(
+                                    Point2d(currentX, currentY),
+                                    Point2d(update.dstX, update.dstY),
+                                    remainingTime.milliseconds
+                                )
+                            } else {
+                                entity.setPos(update.dstX, update.dstY)
+                            }
+                        }
                     }
                     is EntitySay -> {
                         val entity = entitiesById[packet.entityId]
                         entity?.say(packet.text)
                     }
                     is ConversationStart -> {
-                        conversationsById[packet.id] = ClientNpcConversation(conversationOverlay, packet.npcId, packet.id, ws!!)
+                        conversationsById[packet.id] =
+                                ClientNpcConversation(conversationOverlay, packet.npcId, packet.id, ws!!)
                     }
                     is ConversationClose -> {
                         conversationsById.remove(packet.id)
@@ -237,12 +271,31 @@ class MainScene(
                         val entity = entitiesById[packet.entityId]
                         entity?.lookAt(packet.direction)
                     }
+                    is Ping -> {
+                        launch(coroutineContext) {
+                            ws?.sendPacket(Pong(packet.pingTime))
+                        }
+                    }
+                    is Pong -> {
+                        latency = Klock.currentTimeMillis() - packet.pingTime
+                    }
+                }
+            }
+            coroutineContext.eventLoop.setInterval(1000) {
+                launch(coroutineContext) {
+                    ws?.sendPacket(Ping(Klock.currentTimeMillis()))
                 }
             }
         } catch (e: Throwable) {
             e.printStackTrace()
         }
     }
+
+    var latency: Long = 0L
+        set(value) {
+            field = value
+            latencyText?.text = "Latency: $value"
+        }
 
     val bag = LinkedHashMap<String, Int>()
 
@@ -255,6 +308,7 @@ class MainScene(
     suspend fun receive(): Any? = ws?.receivePacket()
 
     lateinit var moneyText: Text
+    var latencyText: Text? = null
 
     override suspend fun sceneInit(sceneView: Container) {
         init()
@@ -277,6 +331,11 @@ class MainScene(
         moneyText = views.text("", textSize = 24.0).apply {
             autoSize = true
             x = 128.0
+            sceneView += this
+        }
+        latencyText = views.text("", textSize = 24.0).apply {
+            autoSize = true
+            x = 400.0
             sceneView += this
         }
         bagUpdated()

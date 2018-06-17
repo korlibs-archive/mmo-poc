@@ -1,6 +1,7 @@
 package mmo.server
 
 import com.soywiz.klock.*
+import com.soywiz.kmem.*
 import com.soywiz.korma.geom.*
 import com.soywiz.korma.interpolation.*
 import kotlinx.coroutines.experimental.*
@@ -22,9 +23,9 @@ open class Entity() {
     var id = lastId++
     var src = Point2d()
     var dst = Point2d()
-    var timeStart = 0L
-    var timeEnd = 0L
-    val totalTime get() = timeEnd - timeStart
+    var srcTime = 0L
+    var dstTime = 0L
+    val totalTime get() = dstTime - srcTime
     var lookAt: Entity? = null
     var lookDirection: CharDirection = CharDirection.UP
     var speed = 64.0 // 32 pixels per second
@@ -171,8 +172,8 @@ abstract class Actor() : Entity() {
     fun setPositionTo(x: Number, y: Number) {
         this.src.setTo(x, y)
         this.dst.setTo(x, y)
-        this.timeStart = 0L
-        this.timeEnd = 0L
+        this.srcTime = 0L
+        this.dstTime = 0L
     }
 
     suspend fun moveBy(dx: Number, dy: Number) = moveTo(getCurrentPosition() + Point2d(dx, dy))
@@ -180,9 +181,9 @@ abstract class Actor() : Entity() {
     suspend fun moveTo(x: Number, y: Number) = moveTo(Point2d(x, y))
 
     fun getCurrentPosition(now: Long = System.currentTimeMillis()): Point2d {
-        if (now > timeEnd) return dst
-        val elapsedTime = now - timeStart
-        val ratio = elapsedTime.toDouble() / totalTime.toDouble()
+        if (now > dstTime) return dst
+        val elapsedTime = now - srcTime
+        val ratio = if (totalTime > 0) (elapsedTime.toDouble() / totalTime.toDouble()).clamp(0.0, 1.0) else 1.0
         return Point2d(
             interpolate(src.x, dst.x, ratio),
             interpolate(src.y, dst.y, ratio)
@@ -194,13 +195,17 @@ abstract class Actor() : Entity() {
         val dist = (src - point).length
         val time = dist / speed
         val currentSrc = getCurrentPosition(now)
+
+        srcTime = now
+        dstTime = now + (time.seconds).milliseconds
+
         src = currentSrc.copy()
-        timeStart = now
-        timeEnd = now + (time.seconds).milliseconds
         dst = point.copy()
-        container?.send(EntityMove(id, src.x, src.y, dst.x, dst.y, 0.0, time))
+
+        container?.sendEntityAppear(this, now = now)
         wait(time.seconds)
         src = dst
+        srcTime = dstTime
     }
 
     fun say(text: String, vararg args: Any?) {
@@ -228,6 +233,10 @@ abstract class Actor() : Entity() {
 
 class ChangeActionException(val action: suspend () -> Unit) : Exception()
 
-fun PacketSendChannel.sendEntityAppear(entity: Entity) = entity.apply {
-    this@sendEntityAppear.send(EntityAppear(id, src.x, src.y, skin, lookDirection))
+fun PacketSendChannel.sendEntityAppear(vararg entities: Entity, now: Long = System.currentTimeMillis()) {
+    this@sendEntityAppear.send(EntityUpdates(now, entities.map {
+        it.run {
+            EntityUpdates.EntityUpdate(id, skin, src.x, src.y, srcTime, dst.x, dst.y, dstTime, lookDirection)
+        }
+    }))
 }

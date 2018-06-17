@@ -130,6 +130,9 @@ suspend fun DefaultWebSocketServerSession.websocketReadProcess(user: User) {
                         }
                     }
                 }
+                is Ping -> {
+                    user.send(Pong(packet.pingTime))
+                }
             }
             //println(packet)
         }

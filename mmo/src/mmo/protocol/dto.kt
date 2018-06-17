@@ -10,6 +10,13 @@ interface BasePacket
 interface ClientPacket : BasePacket
 interface ServerPacket : BasePacket
 
+// Client/Server Packets
+@Serializable
+class Ping(val pingTime: Long) : ClientPacket, ServerPacket
+
+@Serializable
+class Pong(val pingTime: Long) : ClientPacket, ServerPacket
+
 // Client Packets
 @Serializable
 data class ClientSay(val text: String) : ClientPacket
@@ -31,24 +38,25 @@ data class UserSetId(val entityId: Long) : ServerPacket
 data class UserBagUpdate(val item: String, val amount: Int) : ServerPacket
 
 @Serializable
-data class EntityAppear(val entityId: Long, val x: Double, val y: Double, val skin: String, val direction: CharDirection) : ServerPacket
+data class EntityUpdates(
+    val currentTime: Long,
+    val updates: List<EntityUpdate>
+) : ServerPacket {
+    @Serializable
+    data class EntityUpdate(
+        val entityId: Long,
+        val skin: String,
+        val srcX: Double, val srcY: Double, val srcTime: Long,
+        val dstX: Double, val dstY: Double, val dstTime: Long,
+        val direction: CharDirection
+    )
+}
 
 @Serializable
 data class EntityDisappear(val entityId: Long) : ServerPacket
 
 @Serializable
 data class EntitySay(val entityId: Long, val text: String) : ServerPacket
-
-@Serializable
-data class EntityMove(
-    val entityId: Long,
-    val srcX: Double,
-    val srcY: Double,
-    val dstX: Double,
-    val dstY: Double,
-    val elapsedTime: Double,
-    val totalTime: Double
-) : ServerPacket
 
 @Serializable
 data class EntityLookDirection(
@@ -75,6 +83,10 @@ data class ConversationOptions(val id: Long, val text: String, val options: List
 
 // @TODO: It is possible to list @Serializable classes?
 val serializableClasses = listOf(
+    // Client/Server
+    Ping::class,
+    Pong::class,
+
     // Client
     ClientSay::class,
     ClientRequestInteract::class,
@@ -88,10 +100,9 @@ val serializableClasses = listOf(
     UserBagUpdate::class,
 
     // Entities
-    EntityAppear::class,
+    EntityUpdates::class,
     EntityDisappear::class,
     EntitySay::class,
-    EntityMove::class,
     EntityLookDirection::class,
 
     // Conversations
