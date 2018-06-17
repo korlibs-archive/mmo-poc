@@ -29,7 +29,7 @@ allprojects {
     }
 }
 
-task runAll(dependsOn: [":mmo:js:buildAndCopy", ":mmo:jvm:runServer"]) {
+task runAll(dependsOn: [":mmo:js:buildAndCopy", ":mmo:jvm:shadowJar", ":mmo:jvm:runServer"]) {
 
 }
 

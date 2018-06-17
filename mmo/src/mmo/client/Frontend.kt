@@ -81,7 +81,7 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
     fun setSkin(skinName: String) {
         launch(coroutineContext) {
             skin = rm.getSkin(skinName)
-            image.tex = skin[0, 0]
+            image.tex = skin[direction.id, 0]
         }
     }
 
@@ -93,6 +93,7 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
     }
 
     var moving: Promise<Unit>? = null
+    var direction = CharDirection.DOWN
 
     fun move(src: Point2d, dst: Point2d, totalTime: TimeSpan) {
         moving?.cancel()
@@ -120,6 +121,7 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
     }
 
     fun lookAt(direction: CharDirection) {
+        this.direction = direction
         println("lookAt.DIRECTION[$this]: $direction")
         image.tex = skin[direction.id, 0]
     }
@@ -179,7 +181,7 @@ class MainScene(
 
     suspend fun init() {
         try {
-            ws = WebSocketClient((injector.getOrNull<ServerEndPoint>() ?: ServerEndPoint("ws://127.0.0.1:8080/")).endpoint)
+            ws = WebSocketClient((injector.getOrNull() ?: ServerEndPoint("ws://127.0.0.1:8080/")).endpoint)
             ws?.onStringMessage?.invoke { str ->
                 val packet = deserializePacket(str)
                 println("CLIENT RECEIVED: $packet")
@@ -196,6 +198,7 @@ class MainScene(
                         entity.apply {
                             setSkin(packet.skin)
                             setPos(packet.x, packet.y)
+                            lookAt(packet.direction)
                             entityContainer.addChild(view)
                             entitiesById[id] = this
                         }

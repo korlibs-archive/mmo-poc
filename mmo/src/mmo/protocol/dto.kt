@@ -31,7 +31,7 @@ data class UserSetId(val entityId: Long) : ServerPacket
 data class UserBagUpdate(val item: String, val amount: Int) : ServerPacket
 
 @Serializable
-data class EntityAppear(val entityId: Long, val x: Double, val y: Double, val skin: String) : ServerPacket
+data class EntityAppear(val entityId: Long, val x: Double, val y: Double, val skin: String, val direction: CharDirection) : ServerPacket
 
 @Serializable
 data class EntityDisappear(val entityId: Long) : ServerPacket

@@ -229,5 +229,5 @@ abstract class Actor() : Entity() {
 class ChangeActionException(val action: suspend () -> Unit) : Exception()
 
 fun PacketSendChannel.sendEntityAppear(entity: Entity) = entity.apply {
-    this@sendEntityAppear.send(EntityAppear(id, src.x, src.y, skin))
+    this@sendEntityAppear.send(EntityAppear(id, src.x, src.y, skin, lookDirection))
 }
