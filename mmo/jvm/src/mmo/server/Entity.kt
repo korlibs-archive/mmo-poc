@@ -5,7 +5,6 @@ import com.soywiz.korma.geom.*
 import com.soywiz.korma.interpolation.*
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.*
-import mmo.client.*
 import mmo.protocol.*
 import mmo.shared.*
 import java.util.concurrent.*
@@ -37,6 +36,19 @@ interface PacketSendChannel {
 
 open class User(val sc: PacketSendChannel) : Actor(), PacketSendChannel by sc {
     val bag = LinkedHashMap<String, Int>()
+    val flags = LinkedHashSet<String>()
+
+    fun setFlag(flag: String, set: Boolean = true) = run { if (set) flags.add(flag) else flags.remove(flag) }
+    fun unsetFlag(flag: String) = setFlag(flag, false)
+    fun getFlag(flag: String): Boolean = flag in flags
+
+    // @TODO: Transaction system here to prevent issues if the server crashes during the block!
+    inline fun doOnce(flag: String, callback: () -> Unit) {
+        if (!getFlag(flag)) {
+            setFlag(flag)
+            callback()
+        }
+    }
 
     fun getItemAmount(kind: String): Int = bag[kind] ?: 0
 
@@ -102,7 +114,21 @@ class NpcConversation(val npc: Npc, val user: User) {
     }
 }
 
-abstract class Npc() : Actor() {
+class OptionsBuilder<T>(val conversation: NpcConversation) {
+    internal val options = arrayListOf<NpcConversation.Option<T>>()
+    fun option(text: String, block: suspend NpcConversation.() -> T) {
+        options += NpcConversation.Option(text, block)
+    }
+}
+
+suspend fun <T> NpcConversation.options(text: String, callback: OptionsBuilder<T>.() -> Unit): T {
+    val builder = OptionsBuilder<T>(this).apply {
+        callback()
+    }
+    return options(text, *builder.options.toTypedArray())
+}
+
+abstract class Npc : Actor() {
     val conversationsById = LinkedHashMap<Long, NpcConversation>()
 
     suspend fun conversationWith(user: User, callback: suspend NpcConversation.() -> Unit) {

@@ -4,7 +4,7 @@ import mmo.protocol.*
 
 open class EntityContainer : PacketSendChannel {
     val entities = LinkedHashSet<Entity>()
-    val users get() = entities.filterIsInstance<User>()
+    inline val users get() = entities.filterIsInstance<User>()
 
     fun add(entity: Entity) {
         if (entity.container != null) {
