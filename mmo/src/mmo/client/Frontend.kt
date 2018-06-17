@@ -183,7 +183,7 @@ class MmoMainScene(
 ) : Scene() {
     var ws: WebSocketClient? = null
     val entitiesById = LinkedHashMap<Long, ClientEntity>()
-    val background by lazy { views.solidRect(1280, 720, RGBA(0x1e, 0x28, 0x3c, 0xFF)) }
+    val background by lazy { views.solidRect(1280 / 3.0, 720 / 3.0, RGBA(0x1e, 0x28, 0x3c, 0xFF)) }
     val entityContainer by lazy {
         views.container().apply {
             this += background
