@@ -9,6 +9,7 @@ import com.soywiz.korge.render.*
 import com.soywiz.korge.resources.*
 import com.soywiz.korge.scene.*
 import com.soywiz.korge.service.*
+import com.soywiz.korge.tiled.*
 import com.soywiz.korge.tween.*
 import com.soywiz.korge.view.*
 import com.soywiz.korim.color.*
@@ -323,6 +324,9 @@ class MmoMainScene(
             println("CLICK")
             ws?.sendPacket(ClientRequestMove(pos.x, pos.y))
         }
+
+        //entityContainer.addChild(views.tiledMap(resourcesRoot["tileset1.tsx"].readTiledMap(views)))
+        entityContainer.addChild(views.tiledMap(resourcesRoot["tilemap1.tmx"].readTiledMap(views)))
         entityContainer.addComponent(object : Component(entityContainer) {
             override fun update(dtMs: Int) {
                 entityContainer.children.sortBy { it.y }
