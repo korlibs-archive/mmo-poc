@@ -3,6 +3,7 @@ package mmo.server
 import com.soywiz.korio.*
 import io.ktor.application.*
 import io.ktor.content.*
+import io.ktor.features.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.routing.*
@@ -28,6 +29,7 @@ object Experiments {
 fun main(args: Array<String>) {
     embeddedServer(Netty, port = 8080) {
         install(WebSockets)
+        install(ConditionalHeaders)
 
         val webFolder =
             listOf(".", "..", "../..", "../../..").map { File(it).absoluteFile["web"] }.firstOrNull { it.exists() }
