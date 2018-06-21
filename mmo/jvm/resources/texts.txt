@@ -57,3 +57,6 @@
 
 <en>Nothing, I'm ok!
 <es>Nada, ya me iba.
+
+<en>What do you want?
+<es>¿Qué deseas?
