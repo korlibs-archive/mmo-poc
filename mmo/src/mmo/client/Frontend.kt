@@ -1,6 +1,7 @@
 package mmo.client
 
 import com.soywiz.klock.*
+import com.soywiz.klogger.*
 import com.soywiz.kmem.*
 import com.soywiz.korge.component.*
 import com.soywiz.korge.html.*
@@ -12,12 +13,14 @@ import com.soywiz.korge.service.*
 import com.soywiz.korge.tiled.*
 import com.soywiz.korge.tween.*
 import com.soywiz.korge.view.*
+import com.soywiz.korge.view.Text
 import com.soywiz.korge.view.tiles.*
 import com.soywiz.korim.bitmap.*
 import com.soywiz.korim.color.*
 import com.soywiz.korim.format.*
 import com.soywiz.korinject.*
 import com.soywiz.korio.async.*
+import com.soywiz.korio.i18n.*
 import com.soywiz.korio.lang.*
 import com.soywiz.korio.net.ws.*
 import com.soywiz.korma.geom.*
@@ -203,6 +206,8 @@ class MmoMainScene(
     suspend fun init() {
         try {
             ws = WebSocketClient((injector.getOrNull() ?: ServerEndPoint("ws://127.0.0.1:8080/")).endpoint)
+            Console.error("Language: ${Language.CURRENT}")
+            ws?.sendPacket(ClientSetLang(Language.CURRENT.iso6391))
             ws?.onStringMessage?.invoke { str ->
                 val packet = deserializePacket(str)
 

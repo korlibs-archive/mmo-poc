@@ -81,41 +81,12 @@ class Princess(scene: ServerScene) : Npc() {
                     //println("expectedLeversDirection=$expectedLeversDirection")
                     //println("actualLeversDirection=$actualLeversDirection")
                     option("What are those 8 levers?") {
-                        say(
-                            """
-                            There are eight soldiers marching to
-                            the battle waiting for them in the west.
-                        """.trimIndent()
-                        )
-                        say(
-                            """
-                            The soldier in the front, turns to the rest,
-                            and makes them a strange request:
-                        """.trimIndent()
-                        )
-                        say(
-                            """
-                            Half of us, should turn towards most of the others
-                            are, while the other half should do the opposite.
-                        """.trimIndent()
-                        )
-                        say(
-                            """
-                            But you can't do the same as the mates that are
-                            next to you.
-                        """.trimIndent()
-                        )
-                        say(
-                            """
-                            Then the soldier in the front, turned,
-                            and stood up gazing at the battle.
-                        """.trimIndent()
-                        )
-                        say(
-                            """
-                            What strange story, huh?
-                        """.trimIndent()
-                        )
+                        say("There are eight soldiers marching to\nthe battle waiting for them in the west.")
+                        say("The soldier in the front, turns to the rest,\nand makes them a strange request:")
+                        say("Half of us, should turn towards most of the others\nare, while the other half should do the opposite.")
+                        say("But you can't do the same as the mates that are\nnext to you.")
+                        say("Then the soldier in the front, turned,\nand stood up gazing at the battle.")
+                        say("What strange story, huh?")
                         close()
                     }
                 } else if (!user.getFlag("princess-levers")) {

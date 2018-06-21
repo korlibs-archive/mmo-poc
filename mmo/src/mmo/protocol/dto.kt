@@ -19,6 +19,9 @@ data class Pong(val pingTime: Long) : ClientPacket, ServerPacket
 
 // Client Packets
 @Serializable
+data class ClientSetLang(val lang: String) : ClientPacket
+
+@Serializable
 data class ClientSay(val text: String) : ClientPacket
 
 @Serializable
@@ -88,6 +91,7 @@ val serializableClasses = listOf(
     Pong::class,
 
     // Client
+    ClientSetLang::class,
     ClientSay::class,
     ClientRequestInteract::class,
     ClientRequestMove::class,

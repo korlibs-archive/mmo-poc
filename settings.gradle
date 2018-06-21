@@ -2,4 +2,5 @@ rootProject.name = 'mmo-poc'
 
 include 'mmo',
         'mmo:jvm',
-        'mmo:js'
+        'mmo:js',
+        'translations'

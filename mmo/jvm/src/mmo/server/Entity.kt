@@ -2,12 +2,15 @@ package mmo.server
 
 import com.soywiz.klock.*
 import com.soywiz.kmem.*
+import com.soywiz.korio.i18n.Language
 import com.soywiz.korma.geom.*
 import com.soywiz.korma.interpolation.*
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.*
 import mmo.protocol.*
+import mmo.server.text.*
 import mmo.shared.*
+import org.jetbrains.annotations.*
 import java.util.concurrent.*
 import kotlin.collections.set
 
@@ -36,6 +39,7 @@ interface PacketSendChannel {
 }
 
 open class User(val sc: PacketSendChannel) : Actor(), PacketSendChannel by sc {
+    var language = Language.ENGLISH
     val bag = LinkedHashMap<String, Int>()
     val flags = LinkedHashSet<String>()
 
@@ -104,7 +108,10 @@ class NpcConversation(val npc: Npc, val user: User) {
     }
 
     suspend fun <T> options(text: String, vararg options: Option<T>): T {
-        user.send(ConversationOptions(id, text, options.map { it.title }))
+        user.send(ConversationOptions(
+            id, Texts.getText(text, user.language),
+            options.map { Texts.getText(it.title, user.language) }
+        ))
         val selection = onUserSelection.receive()
         return options.getOrNull(selection)?.callback?.invoke(this) ?: error("Invalid user selection")
     }
@@ -117,12 +124,12 @@ class NpcConversation(val npc: Npc, val user: User) {
 
 class OptionsBuilder<T>(val conversation: NpcConversation) {
     internal val options = arrayListOf<NpcConversation.Option<T>>()
-    fun option(text: String, block: suspend NpcConversation.() -> T) {
+    fun option(@Nls text: String, block: suspend NpcConversation.() -> T) {
         options += NpcConversation.Option(text, block)
     }
 }
 
-suspend fun <T> NpcConversation.options(text: String, callback: OptionsBuilder<T>.() -> Unit): T {
+suspend fun <T> NpcConversation.options(@Nls text: String, callback: OptionsBuilder<T>.() -> Unit): T {
     val builder = OptionsBuilder<T>(this).apply {
         callback()
     }
@@ -208,13 +215,17 @@ abstract class Actor() : Entity() {
         srcTime = dstTime
     }
 
-    fun say(text: String, vararg args: Any?) {
-        val formattedText = try {
-            text.format(*args)
-        } catch (e: Throwable) {
-            text
+    fun say(@Nls text: String, vararg args: Any?) {
+        // @TODO: Do formatting at the client?
+        val texts = Texts.languages.map { lang ->
+            val ttext = Texts.getText(text, lang)
+            lang to try { ttext.format(*args) } catch (e: Throwable) { text }
+        }.toMap()
+        for (user in container?.users ?: listOf()) {
+            val rtext = texts[user.language] ?: texts[Language.ENGLISH] ?: try { text.format(*args) } catch (e: Throwable) { text }
+            user.send(EntitySay(id, rtext))
         }
-        container?.send(EntitySay(id, formattedText))
+        //container?.send(EntitySay(id, formattedText))
     }
 
     fun lookAt(entity: Entity) {

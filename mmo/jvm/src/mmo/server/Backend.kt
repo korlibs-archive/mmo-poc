@@ -1,6 +1,7 @@
 package mmo.server
 
 import com.soywiz.korio.*
+import com.soywiz.korio.i18n.Language
 import io.ktor.application.*
 import io.ktor.content.*
 import io.ktor.features.*
@@ -99,6 +100,9 @@ suspend fun DefaultWebSocketServerSession.websocketReadProcess(user: User) {
         while (true) {
             val packet = incoming.receivePacket() as? ClientPacket ?: error("Trying to send an invalid packet")
             when (packet) {
+                is ClientSetLang -> {
+                    user.language = Language[packet.lang] ?: Language.ENGLISH
+                }
                 is ClientSay -> {
                     // Everyone on the room will read the text
                     user.container?.send(EntitySay(user.id, packet.text))
