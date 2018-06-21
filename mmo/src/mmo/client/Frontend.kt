@@ -12,7 +12,10 @@ import com.soywiz.korge.service.*
 import com.soywiz.korge.tiled.*
 import com.soywiz.korge.tween.*
 import com.soywiz.korge.view.*
+import com.soywiz.korge.view.tiles.*
+import com.soywiz.korim.bitmap.*
 import com.soywiz.korim.color.*
+import com.soywiz.korim.format.*
 import com.soywiz.korinject.*
 import com.soywiz.korio.async.*
 import com.soywiz.korio.lang.*
@@ -45,7 +48,7 @@ open class MmoModule : Module() {
     }
 }
 
-class CharacterSkin(val base: Texture) {
+class CharacterSkin(val base: TileSet) {
     companion object {
         val ROWS = 4
         val COLS = 3
@@ -53,11 +56,7 @@ class CharacterSkin(val base: Texture) {
 
     val cellWidth = base.width / COLS
     val cellHeight = base.height / ROWS
-    val items = (0 until ROWS).map { row ->
-        (0 until COLS).map { column ->
-            base.slice(cellWidth * column, cellHeight * row, cellWidth, cellHeight)
-        }
-    }
+    val items = (0 until ROWS).map { row -> (0 until COLS).map { column -> base[row * 3 + column] ?: base.views.transparentTexture } }
 
     operator fun get(row: Int, col: Int) = items[row][col]
 }
@@ -65,16 +64,18 @@ class CharacterSkin(val base: Texture) {
 class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
     val queue = AsyncThread()
     val skins = LinkedHashMap<String, CharacterSkin>()
-    val emptySkin = CharacterSkin(views.transparentTexture)
+    val emptySkin = CharacterSkin(TileSet(views, listOf(views.transparentTexture), 1, 1))
 
     suspend fun getSkin(skinName: String): CharacterSkin = queue {
         skins.getOrPut(skinName) {
-            val texture = try {
-                resourcesRoot["chara/$skinName.png"].readTexture(views.ag)
+            val bitmap = try {
+                resourcesRoot["chara/$skinName.png"].readBitmapOptimized().toBMP32()
             } catch (e: Throwable) {
-                views.transparentTexture
+                Bitmap32(64, 64)
             }
-            CharacterSkin(texture)
+            val bitmaps = TileSet.extractBitmaps(bitmap, bitmap.width / 3, bitmap.height / 4, 3, 3 * 4)
+            val tileset = TileSet.fromBitmaps(views, bitmap.width / 3, bitmap.height / 4, bitmaps)
+            CharacterSkin(tileset)
         }
     }
 }
