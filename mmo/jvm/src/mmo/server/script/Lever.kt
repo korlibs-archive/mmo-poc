@@ -1,9 +1,10 @@
 package mmo.server.script
 
+import com.soywiz.korma.geom.*
 import mmo.server.*
 import mmo.shared.*
 
-class Lever(container: EntityContainer, val lever: Int, x: Int, y: Int) : Npc() {
+class Lever(container: EntityContainer, val lever: Int, val pos: IPoint2d) : Npc() {
     companion object {
         val ON = CharDirection.DOWN
         val OFF = CharDirection.UP
@@ -11,7 +12,7 @@ class Lever(container: EntityContainer, val lever: Int, x: Int, y: Int) : Npc() 
     }
 
     init {
-        setPositionTo(x, y)
+        setPositionTo(pos)
         skin = "levers"
         name = "Lever$lever"
         lookAt(OFF)

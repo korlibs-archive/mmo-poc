@@ -25,7 +25,7 @@ data class ClientSetLang(val lang: String) : ClientPacket
 data class ClientSay(val text: String) : ClientPacket
 
 @Serializable
-data class ClientRequestMove(val x: Double, val y: Double) : ClientPacket
+data class ClientRequestMove(val x: Int, val y: Int) : ClientPacket
 
 @Serializable
 data class ClientRequestInteract(val entityId: Long) : ClientPacket

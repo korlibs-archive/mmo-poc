@@ -19,6 +19,8 @@ open class Entity() {
 
     companion object {
         var lastId = 1L
+        //val DEFAULT_SPEED = 64.0 // 64 pixels per second
+        val DEFAULT_SPEED = 2.0 // 2 tiles per second
     }
 
     var name = "unknown"
@@ -31,7 +33,7 @@ open class Entity() {
     val totalTime get() = dstTime - srcTime
     var lookAt: Entity? = null
     var lookDirection: CharDirection = CharDirection.UP
-    var speed = 64.0 // 32 pixels per second
+    var speed = DEFAULT_SPEED
 }
 
 interface PacketSendChannel {
@@ -172,7 +174,7 @@ abstract class Actor() : Entity() {
     fun changeTo(callback: suspend () -> Unit): Unit = throw ChangeActionException(callback)
 
 
-    suspend fun speed(scale: Double = 64.0) {
+    suspend fun speed(scale: Double = DEFAULT_SPEED) {
         this.speed = scale
     }
 
@@ -183,9 +185,13 @@ abstract class Actor() : Entity() {
         this.dstTime = 0L
     }
 
-    suspend fun moveBy(dx: Number, dy: Number) = moveTo(getCurrentPosition() + Point2d(dx, dy))
+    fun setPositionTo(pos: IPoint2d) = setPositionTo(pos.x, pos.y)
 
+    suspend fun moveBy(dx: Number, dy: Number) = moveTo(getCurrentPosition() + Point2d(dx, dy))
     suspend fun moveTo(x: Number, y: Number) = moveTo(Point2d(x, y))
+
+    suspend fun moveBy(delta: IPoint2d) = moveTo(getCurrentPosition() + Point2d(delta.x, delta.y))
+    suspend fun moveTo(pos: IPoint2d) = moveTo(Point2d(pos.x, pos.y))
 
     fun getCurrentPosition(now: Long = System.currentTimeMillis()): Point2d {
         if (now > dstTime) return dst

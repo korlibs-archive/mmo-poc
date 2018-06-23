@@ -1,6 +1,10 @@
 package mmo.server
 
+import com.soywiz.korge.tiled.*
 import com.soywiz.korio.*
+import com.soywiz.korio.async.*
+import com.soywiz.korio.async.EventLoop
+import com.soywiz.korio.file.std.*
 import com.soywiz.korio.i18n.Language
 import io.ktor.application.*
 import io.ktor.content.*
@@ -29,50 +33,59 @@ object Experiments {
 
 fun main(args: Array<String>) {
     embeddedServer(Netty, port = 8080) {
-        install(WebSockets)
-        install(ConditionalHeaders)
+        runBlocking {
+            install(WebSockets)
+            install(ConditionalHeaders)
 
-        val webFolder =
-            listOf(".", "..", "../..", "../../..").map { File(it).absoluteFile["web"] }.firstOrNull { it.exists() }
-
-        println("webFolder:$webFolder")
-
-        val mainScene = ServerScene("lobby")
-        Princess(mainScene).apply { start() }
-
-        routing {
-            static("/") {
-                webSocket {
-                    delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
-                    val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
-
-                    val user = User(object : PacketSendChannel {
-                        override fun send(packet: ServerPacket) {
-                            //println("OFFERING: $packet")
-                            sendQueue.offer(packet)
-                        }
-                    }).apply {
-                        this.skin = "user0"
-                        this.setPositionTo(25, 25)
-                    }
-
-                    websocketWriteProcess(coroutineContext, this, user, sendQueue)
-                    user.send(UserSetId(user.id))
-
-                    try {
-                        mainScene.add(user)
-                        user.sendAllEntities(user.container)
-                        websocketReadProcess(user)
-                    } finally {
-                        mainScene.remove(user)
+            Thread {
+                EventLoop.main {
+                    globalEventLoop = this
+                    while (true) {
+                        sleepNextFrame()
                     }
                 }
+            }.start()
 
-                if (webFolder != null) {
+            val webFolder =
+                listOf(".", "..", "../..", "../../..").map { File(it).absoluteFile["web"] }.firstOrNull { it.exists() }
+                        ?: error("Can't find 'web' folder")
+            val webVfs = webFolder.toVfs()
+
+            println("webFolder:$webFolder")
+
+            val mainScene = ServerScene("lobby", webVfs["library1.tmx"].readTiledMapData())
+            Princess(mainScene).apply { start() }
+
+            routing {
+                static("/") {
+                    webSocket {
+                        delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
+                        val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
+
+                        val user = User(object : PacketSendChannel {
+                            override fun send(packet: ServerPacket) {
+                                //println("OFFERING: $packet")
+                                sendQueue.offer(packet)
+                            }
+                        }).apply {
+                            this.skin = "user0"
+                            this.setPositionTo(4, 4)
+                        }
+
+                        websocketWriteProcess(coroutineContext, this, user, sendQueue)
+                        user.send(UserSetId(user.id))
+
+                        try {
+                            mainScene.add(user)
+                            user.sendAllEntities(user.container)
+                            websocketReadProcess(user)
+                        } finally {
+                            mainScene.remove(user)
+                        }
+                    }
+
                     default(File(webFolder, "index.html"))
                     files(webFolder)
-                } else {
-                    resources()
                 }
             }
         }

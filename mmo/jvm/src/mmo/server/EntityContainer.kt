@@ -1,5 +1,6 @@
 package mmo.server
 
+import com.soywiz.korge.tiled.*
 import mmo.protocol.*
 
 open class EntityContainer : PacketSendChannel {
@@ -34,5 +35,5 @@ fun PacketSendChannel.sendAllEntities(container: EntityContainer?) {
     for (entity in container?.entities?.toList() ?: listOf()) sendEntityAppear(entity)
 }
 
-open class ServerScene(val name: String) : EntityContainer() {
+open class ServerScene(val name: String, val map: TiledMapData) : EntityContainer() {
 }

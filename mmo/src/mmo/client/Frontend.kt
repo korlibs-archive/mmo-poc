@@ -6,14 +6,12 @@ import com.soywiz.kmem.*
 import com.soywiz.korge.component.*
 import com.soywiz.korge.html.*
 import com.soywiz.korge.input.*
-import com.soywiz.korge.render.*
 import com.soywiz.korge.resources.*
 import com.soywiz.korge.scene.*
 import com.soywiz.korge.service.*
 import com.soywiz.korge.tiled.*
 import com.soywiz.korge.tween.*
 import com.soywiz.korge.view.*
-import com.soywiz.korge.view.Text
 import com.soywiz.korge.view.tiles.*
 import com.soywiz.korim.bitmap.*
 import com.soywiz.korim.color.*
@@ -43,7 +41,7 @@ open class MmoModule : Module() {
 
     override suspend fun init(injector: AsyncInjector) {
         injector
-            .mapPrototype { MmoMainScene(get(), get()) }
+            .mapPrototype { MmoMainScene(get(), get(), get()) }
             .mapSingleton { ResourceManager(get(), get()) }
             .mapSingleton { Browser(get()) }
         //.mapPrototype { MainScene(get()) }
@@ -59,7 +57,11 @@ class CharacterSkin(val base: TileSet) {
 
     val cellWidth = base.width / COLS
     val cellHeight = base.height / ROWS
-    val items = (0 until ROWS).map { row -> (0 until COLS).map { column -> base[row * 3 + column] ?: base.views.transparentTexture } }
+    val items = (0 until ROWS).map { row ->
+        (0 until COLS).map { column ->
+            base[row * 3 + column] ?: base.views.transparentTexture
+        }
+    }
 
     operator fun get(row: Int, col: Int) = items[row][col]
 }
@@ -83,8 +85,17 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
     }
 }
 
+interface ClientListener {
+    fun updatedEntityCoords(entity: ClientEntity)
+}
 
-class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineContext, val id: Long, val views: Views) {
+class ClientEntity(
+    val rm: ResourceManager,
+    val coroutineContext: CoroutineContext,
+    val id: Long,
+    val views: Views,
+    val listener: ClientListener
+) {
     val image = views.image(views.transparentTexture).apply {
         anchorX = 0.5
         anchorY = 1.0
@@ -108,6 +119,7 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
         moving = null
         view.x = x
         view.y = y
+        listener.updatedEntityCoords(this)
     }
 
     var moving: Promise<Unit>? = null
@@ -118,7 +130,7 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
         view.x = src.x
         view.y = src.y
         moving = launch(coroutineContext) {
-            println("move $src, $dst, time=$totalTime")
+            //println("move $src, $dst, time=$totalTime")
             val dx = (dst.x - src.x).absoluteValue
             val dy = (dst.y - src.y).absoluteValue
             val horizontal = dx >= dy
@@ -133,6 +145,7 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
                 val elapsed = totalTime.seconds * step
                 val frame = (elapsed / 0.1).toInt()
                 image.tex = skin[direction.id, frame % CharacterSkin.COLS]
+                listener.updatedEntityCoords(this)
             }
             image.tex = skin[direction.id, 1]
         }
@@ -140,7 +153,7 @@ class ClientEntity(val rm: ResourceManager, val coroutineContext: CoroutineConte
 
     fun lookAt(direction: CharDirection) {
         this.direction = direction
-        println("lookAt.DIRECTION[$this]: $direction")
+        //println("lookAt.DIRECTION[$this]: $direction")
         image.tex = skin[direction.id, 0]
     }
 
@@ -182,18 +195,28 @@ class ClientNpcConversation(
     }
 }
 
+//fun tilePosToSpriteCoords(x: Double, y: Double): IPoint2d = IPoint2d(x * 32.0 + 16.0, y * 32.0 + 32.0)
+fun tilePosToSpriteCoords(x: Double, y: Double): IPoint2d = IPoint2d(x * 32.0 + 16.0, y * 32.0 + 16.0)
+
 class MmoMainScene(
     val rm: ResourceManager,
-    val browser: Browser
-) : Scene() {
+    val browser: Browser,
+    val module: Module
+) : Scene(), ClientListener {
+    val MAP_SCALE = 3.0
     var ws: WebSocketClient? = null
     val entitiesById = LinkedHashMap<Long, ClientEntity>()
     val background by lazy { views.solidRect(1280 / 3.0, 720 / 3.0, RGBA(0x1e, 0x28, 0x3c, 0xFF)) }
+    val camera by lazy {
+        views.camera().apply {
+            scale = MAP_SCALE
+            sceneView += this
+        }
+    }
     val entityContainer by lazy {
         views.container().apply {
             this += background
-            scale = 3.0
-            sceneView += this
+            camera += this
         }
     }
     val conversationOverlay by lazy {
@@ -202,6 +225,20 @@ class MmoMainScene(
         }
     }
     val conversationsById = LinkedHashMap<Long, ClientNpcConversation>()
+
+    var userId: Long = -1L
+
+    override fun updatedEntityCoords(entity: ClientEntity) {
+        if (entity.id == userId) {
+            //camera.setTo(entity.view)
+            //println("CAMERA(${camera.x}, ${camera.y})")
+            //println("USER MOVED TO $entity")
+            camera.x = -(((entity.view.x - module.size.width.toDouble() / MAP_SCALE / 2) * MAP_SCALE).clamp(0.0, 5000.0))
+            camera.y = -(((entity.view.y - module.size.height.toDouble() / MAP_SCALE / 2) * MAP_SCALE).clamp(0.0, 5000.0))
+        } else {
+            //println("OTHER MOVED TO $entity")
+        }
+    }
 
     suspend fun init() {
         try {
@@ -222,7 +259,7 @@ class MmoMainScene(
                         val now = packet.currentTime
                         for (update in packet.updates) {
                             val entity = entitiesById.getOrPut(update.entityId) {
-                                ClientEntity(rm, coroutineContext, update.entityId, views).apply {
+                                ClientEntity(rm, coroutineContext, update.entityId, views, this@MmoMainScene).apply {
                                     view.onClick {
                                         ws?.sendPacket(ClientRequestInteract(id))
                                     }
@@ -239,21 +276,27 @@ class MmoMainScene(
 
                             //println("Update: $update")
 
+                            val src = tilePosToSpriteCoords(update.srcX, update.srcY)
+                            val dst = tilePosToSpriteCoords(update.dstX, update.dstY)
+                            val srcX = src.x
+                            val srcY = src.y
+                            val dstX = dst.x
+                            val dstY = dst.y
                             if (totalTime > 0) {
                                 val ratio = (if (totalTime > 0.0) elapsed / totalTime else 1.0).clamp(0.0, 1.0)
 
-                                val currentX = interpolate(update.srcX, update.dstX, ratio)
-                                val currentY = interpolate(update.srcY, update.dstY, ratio)
+                                val currentX = interpolate(srcX, dstX, ratio)
+                                val currentY = interpolate(srcY, dstY, ratio)
 
                                 val remainingTime = totalTime - elapsed
 
                                 entity.move(
                                     Point2d(currentX, currentY),
-                                    Point2d(update.dstX, update.dstY),
+                                    Point2d(dstX, dstY),
                                     remainingTime.milliseconds
                                 )
                             } else {
-                                entity.setPos(update.dstX, update.dstY)
+                                entity.setPos(dstX, dstY)
                             }
                         }
                     }
@@ -291,16 +334,29 @@ class MmoMainScene(
                     }
                     is Pong -> {
                         latency = Klock.currentTimeMillis() - packet.pingTime
+                        coroutineContext.eventLoop.setTimeout(5000) {
+                            sendPing()
+                        }
+                    }
+                    is UserSetId -> {
+                        userId = packet.entityId
+                        entitiesById[userId]?.let { this.updatedEntityCoords(it) }
+
+                    }
+                    else -> {
+                        Console.error("Unhandled packet from server", packet)
                     }
                 }
             }
-            coroutineContext.eventLoop.setInterval(1000) {
-                launch(coroutineContext) {
-                    ws?.sendPacket(Ping(Klock.currentTimeMillis()))
-                }
-            }
+            sendPing()
         } catch (e: Throwable) {
             e.printStackTrace()
+        }
+    }
+
+    fun sendPing() {
+        launch(coroutineContext) {
+            ws?.sendPacket(Ping(Klock.currentTimeMillis()))
         }
     }
 
@@ -328,11 +384,12 @@ class MmoMainScene(
         entityContainer.onClick {
             val pos = it.currentPos
             println("CLICK")
-            ws?.sendPacket(ClientRequestMove(pos.x, pos.y))
+            ws?.sendPacket(ClientRequestMove((pos.x / 32.0).toInt(), (pos.y / 32.0).toInt()))
         }
 
         //entityContainer.addChild(views.tiledMap(resourcesRoot["tileset1.tsx"].readTiledMap(views)))
-        entityContainer.addChild(views.tiledMap(resourcesRoot["tilemap1.tmx"].readTiledMap(views)))
+        //entityContainer.addChild(views.tiledMap(resourcesRoot["tilemap1.tmx"].readTiledMap(views)))
+        entityContainer.addChild(views.tiledMap(resourcesRoot["library1.tmx"].readTiledMap(views)))
         entityContainer.addComponent(object : Component(entityContainer) {
             override fun update(dtMs: Int) {
                 entityContainer.children.sortBy { it.y }

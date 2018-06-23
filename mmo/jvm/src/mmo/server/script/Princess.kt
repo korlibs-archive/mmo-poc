@@ -1,11 +1,14 @@
 package mmo.server.script
 
 import com.soywiz.klock.*
+import com.soywiz.korge.tiled.*
 import com.soywiz.korma.geom.*
 import mmo.server.*
 
 class Princess(scene: ServerScene) : Npc() {
-    val levers = (0 until 8).map { Lever(scene, it, 64 + 32 * it, 128) }
+    val map = scene.map
+
+    val levers = (0 until 8).map { Lever(scene, it, map.getObjectPosByName("lever$it") ?: IPoint2d(0, 0)) }
     val WEST = false//Lever.OFF
     val EAST = true//Lever.ON
 
@@ -32,8 +35,13 @@ class Princess(scene: ServerScene) : Npc() {
 
     val leversInPosition get() = expectedLeversDirection == actualLeversDirection
 
+    val pos1 = map.getObjectPosByName("princess1") ?: IPoint2d(0, 0)
+    val pos2 = map.getObjectPosByName("princess2") ?: IPoint2d(0, 0)
+    val pos3 = map.getObjectPosByName("princess3") ?: IPoint2d(0, 0)
+
     init {
-        src = Point2d(0, 50)
+        println("Princess($pos1, $pos2, $pos3)")
+        src = Point2d(pos1)
         skin = "princess1"
         name = "Princess"
         scene.add(this)
@@ -42,10 +50,10 @@ class Princess(scene: ServerScene) : Npc() {
 
     override suspend fun script() {
         while (true) {
-            moveTo(100, 50)
-            moveBy(0, 20)
+            moveTo(pos1)
+            moveTo(pos2)
             wait(0.5.seconds)
-            moveTo(0, 50)
+            moveTo(pos3)
             val people = container?.users?.size ?: 0
             say("Will someone else come?\nWe are already %d!", people + 1)
             wait(1.seconds)
