@@ -60,3 +60,6 @@
 
 <en>What do you want?
 <es>¿Qué deseas?
+
+<en>Let's keep things as they were before...
+<es>Vamos a dejar las cosas como estaban...

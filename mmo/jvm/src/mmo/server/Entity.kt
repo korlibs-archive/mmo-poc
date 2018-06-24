@@ -148,17 +148,24 @@ abstract class Npc : Actor() {
 
     abstract suspend fun script(): Unit
 
+    fun changeMainScriptTo(callback: suspend () -> Unit): Unit {
+        myscript = callback
+        job?.cancel()
+    }
+
     open suspend fun onUserInteraction(user: User) {
     }
 
+    var job: Job? = null
+    var myscript: suspend () -> Unit = { script() }
+
     suspend fun run() {
-        var myscript: suspend () -> Unit = { script() }
         while (true) {
             try {
-                myscript()
-                break
-            } catch (e: ChangeActionException) {
-                myscript = e.action
+                job = launch { myscript() }
+                job?.join()
+            } catch (e: Throwable) {
+                e.printStackTrace()
             }
         }
     }
@@ -171,9 +178,6 @@ abstract class Npc : Actor() {
 }
 
 abstract class Actor() : Entity() {
-    fun changeTo(callback: suspend () -> Unit): Unit = throw ChangeActionException(callback)
-
-
     suspend fun speed(scale: Double = DEFAULT_SPEED) {
         this.speed = scale
     }

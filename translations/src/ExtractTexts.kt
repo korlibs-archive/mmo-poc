@@ -11,7 +11,7 @@ fun main(args: Array<String>) = Korio {
             val str = file.readString()
             if (str.contains(":" + " Npc()")) {
                 println(file)
-                val parts = Regex("(?:say|option|options)(?:<.*?>)\\(\"(.*)\"").findAll(str)
+                val parts = Regex("(?:say|option|options)(?:<.*>)?\\(\"(.*)\"").findAll(str)
                 for (part in parts) {
                     val enLine = "<en>" + part.groupValues[1]
                     if (!textLines.contains(enLine)) {

@@ -3,6 +3,7 @@ package mmo.server.script
 import com.soywiz.klock.*
 import com.soywiz.korge.tiled.*
 import com.soywiz.korma.geom.*
+import kotlinx.coroutines.experimental.*
 import mmo.server.*
 
 class Princess(scene: ServerScene) : Npc() {
@@ -60,6 +61,17 @@ class Princess(scene: ServerScene) : Npc() {
         }
     }
 
+    suspend fun restoreLevers() {
+        say("Let's keep things as they were before...")
+        for (lever in levers) {
+            moveTo(Point2d(lever.pos) + IPoint2d(0, 1))
+            lever.on = false
+            delay(300)
+        }
+
+        changeMainScriptTo { script() }
+    }
+
     override suspend fun onUserInteraction(user: User) {
         val gold = "gold"
         val experience = "experience"
@@ -103,6 +115,7 @@ class Princess(scene: ServerScene) : Npc() {
                             user.addItems(gold, amount = 5000)
                             user.addItems(experience, amount = 5000)
                         }
+                        changeMainScriptTo { restoreLevers() }
                         say("Good job!")
                         close()
                     }
