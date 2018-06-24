@@ -5,6 +5,7 @@ import com.soywiz.korge.tiled.*
 import com.soywiz.korma.geom.*
 import kotlinx.coroutines.experimental.*
 import mmo.server.*
+import mmo.shared.*
 
 class Princess(scene: ServerScene) : Npc() {
     val map = scene.map
@@ -64,9 +65,12 @@ class Princess(scene: ServerScene) : Npc() {
     suspend fun restoreLevers() {
         say("Let's keep things as they were before...")
         for (lever in levers) {
-            moveTo(Point2d(lever.pos) + IPoint2d(0, 1))
-            lever.on = false
-            delay(300)
+            if (lever.on) {
+                moveTo(Point2d(lever.pos) + IPoint2d(0, 1))
+                lookAt(CharDirection.UP)
+                lever.on = false
+                delay(300)
+            }
         }
 
         changeMainScriptTo { script() }
