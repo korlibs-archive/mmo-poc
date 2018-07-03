@@ -1,12 +1,13 @@
 buildscript {
-    ext.kotlin_version = '1.2.50'
+    ext.kotlin_version = '1.2.51'
     ext.serialization_version = '0.5.1'
-    ext.ktor_version = '0.9.2'
+    ext.ktor_version = '0.9.3'
     ext.logback_version = '1.2.3'
-    ext.korge_version = '0.31.0'
+    ext.korge_version = '0.32.0'
     ext.web_dir = 'web'
 
     repositories {
+        mavenLocal()
         jcenter()
         maven { url "https://kotlin.bintray.com/kotlinx" }
     }
