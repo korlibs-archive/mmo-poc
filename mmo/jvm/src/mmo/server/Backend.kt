@@ -24,7 +24,8 @@ import kotlin.coroutines.experimental.*
 import kotlin.reflect.*
 
 object Experiments {
-    @JvmStatic fun main(args: Array<String>) {
+    @JvmStatic
+    fun main(args: Array<String>) {
         val packet = serializePacket(ClientSay("HELLO"), ClientSay::class)
         println(packet)
         println(deserializePacket(packet))
