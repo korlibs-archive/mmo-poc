@@ -74,7 +74,7 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
     suspend fun getSkin(skinName: String): CharacterSkin = queue {
         skins.getOrPut(skinName) {
             val bitmap = try {
-                resourcesRoot["chara/$skinName.png"].readBitmapOptimized().toBMP32()
+                resourcesRoot["chara/$skinName.png"].readBitmapOptimized(views.imageFormats).toBMP32()
             } catch (e: Throwable) {
                 Bitmap32(64, 64)
             }

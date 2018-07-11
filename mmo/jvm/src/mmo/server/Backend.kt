@@ -40,7 +40,6 @@ fun main(args: Array<String>) {
 
             Thread {
                 EventLoop.main {
-                    globalEventLoop = this
                     while (true) {
                         sleepNextFrame()
                     }
@@ -69,7 +68,7 @@ fun main(args: Array<String>) {
                                 sendQueue.offer(packet)
                             }
                         }).apply {
-                            this.skin = "user0"
+                            this.skin = "body-chubby"
                             this.setPositionTo(4, 4)
                         }
 
