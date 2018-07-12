@@ -71,10 +71,14 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
     val skins = LinkedHashMap<String, CharacterSkin>()
     val emptySkin = CharacterSkin(TileSet(views, listOf(views.transparentTexture), 1, 1))
 
-    suspend fun getSkin(skinName: String): CharacterSkin = queue {
+    suspend fun getSkin(prefix: String, skinName: String): CharacterSkin = queue {
         skins.getOrPut(skinName) {
             val bitmap = try {
-                resourcesRoot["chara/$skinName.png"].readBitmapOptimized(views.imageFormats).toBMP32()
+                if (skinName == Skins.Body.none.name) {
+                    Bitmap32(64, 64)
+                } else {
+                    resourcesRoot["chara/$prefix$skinName.png"].readBitmapOptimized(views.imageFormats).toBMP32()
+                }
             } catch (e: Throwable) {
                 Bitmap32(64, 64)
             }
@@ -96,21 +100,35 @@ class ClientEntity(
     val views: Views,
     val listener: ClientListener
 ) {
-    val image = views.image(views.transparentTexture).apply {
+    // @TODO: Remove code duplication related to layers
+    val imageBody = views.image(views.transparentTexture).apply {
+        anchorX = 0.5
+        anchorY = 1.0
+    }
+    val imageArmor = views.image(views.transparentTexture).apply {
+        anchorX = 0.5
+        anchorY = 1.0
+    }
+    val imageHead = views.image(views.transparentTexture).apply {
         anchorX = 0.5
         anchorY = 1.0
     }
     val text = views.text("", textSize = 8.0)
     val view = views.container().apply {
-        addChild(image)
+        addChild(imageBody)
+        addChild(imageArmor)
+        addChild(imageHead)
         addChild(text)
     }
-    var skin: CharacterSkin = rm.emptySkin
+    var skinBody: CharacterSkin = rm.emptySkin
+    var skinArmor: CharacterSkin = rm.emptySkin
+    var skinHead: CharacterSkin = rm.emptySkin
 
-    fun setSkin(skinName: String) {
+    fun setSkin(body: Skins.Body, armor: Skins.Armor, head: Skins.Head) {
         launch(coroutineContext) {
-            skin = rm.getSkin(skinName)
-            image.tex = skin[direction.id, 0]
+            imageBody.tex = rm.getSkin(Skins.Body.prefix, body.name).apply { skinBody = this }[direction.id, 0]
+            imageArmor.tex = rm.getSkin(Skins.Armor.prefix, armor.name).apply { skinArmor = this }[direction.id, 0]
+            imageHead.tex = rm.getSkin(Skins.Head.prefix, head.name).apply { skinHead = this }[direction.id, 0]
         }
     }
 
@@ -144,17 +162,23 @@ class ClientEntity(
             view.tween(view::x[src.x, dst.x], view::y[src.y, dst.y], time = totalTime) { step ->
                 val elapsed = totalTime.seconds * step
                 val frame = (elapsed / 0.1).toInt()
-                image.tex = skin[direction.id, frame % CharacterSkin.COLS]
+                imageBody.tex = skinBody[direction.id, frame % CharacterSkin.COLS]
+                imageArmor.tex = skinArmor[direction.id, frame % CharacterSkin.COLS]
+                imageHead.tex = skinHead[direction.id, frame % CharacterSkin.COLS]
                 listener.updatedEntityCoords(this)
             }
-            image.tex = skin[direction.id, 1]
+            imageBody.tex = skinBody[direction.id, 1]
+            imageArmor.tex = skinArmor[direction.id, 1]
+            imageHead.tex = skinHead[direction.id, 1]
         }
     }
 
     fun lookAt(direction: CharDirection) {
         this.direction = direction
         //println("lookAt.DIRECTION[$this]: $direction")
-        image.tex = skin[direction.id, 0]
+        imageBody.tex = skinBody[direction.id, 0]
+        imageArmor.tex = skinArmor[direction.id, 0]
+        imageHead.tex = skinHead[direction.id, 0]
     }
 
     var sayPromise: Promise<Unit>? = null
@@ -268,7 +292,11 @@ class MmoMainScene(
                                 }
                             }
 
-                            entity.setSkin(update.skin)
+                            entity.setSkin(
+                                Skins.Body[update.skinBodyId]!!,
+                                Skins.Armor[update.skinArmorId]!!,
+                                Skins.Head[update.skinHeadId]!!
+                            )
                             entity.lookAt(update.direction)
 
                             val elapsed = (now - update.srcTime).toDouble()

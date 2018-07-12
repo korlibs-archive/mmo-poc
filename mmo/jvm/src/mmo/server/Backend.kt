@@ -19,6 +19,7 @@ import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.*
 import mmo.protocol.*
 import mmo.server.script.*
+import mmo.shared.*
 import java.io.*
 import kotlin.coroutines.experimental.*
 import kotlin.reflect.*
@@ -68,7 +69,9 @@ fun main(args: Array<String>) {
                                 sendQueue.offer(packet)
                             }
                         }).apply {
-                            this.skin = "body-chubby"
+                            this.skinBody = Skins.Body.chubby
+                            this.skinArmor = Skins.Armor.armor1
+                            this.skinHead = Skins.Head.elf1
                             this.setPositionTo(4, 4)
                         }
 

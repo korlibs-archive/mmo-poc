@@ -48,7 +48,9 @@ data class EntityUpdates(
     @Serializable
     data class EntityUpdate(
         val entityId: Long,
-        val skin: String,
+        val skinBodyId: Int,
+        val skinArmorId: Int,
+        val skinHeadId: Int,
         val srcX: Double, val srcY: Double, val srcTime: Long,
         val dstX: Double, val dstY: Double, val dstTime: Long,
         val direction: CharDirection

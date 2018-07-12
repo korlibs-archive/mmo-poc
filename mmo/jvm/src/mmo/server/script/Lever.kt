@@ -13,7 +13,7 @@ class Lever(container: EntityContainer, val lever: Int, val pos: IPoint2d) : Npc
 
     init {
         setPositionTo(pos)
-        skin = "levers"
+        skinBody = Skins.Body.levers
         name = "Lever$lever"
         lookAt(OFF)
         container.add(this)

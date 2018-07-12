@@ -44,7 +44,7 @@ class Princess(scene: ServerScene) : Npc() {
     init {
         println("Princess($pos1, $pos2, $pos3)")
         src = Point2d(pos1)
-        skin = "princess1"
+        skinBody = Skins.Body.princess1
         name = "Princess"
         scene.add(this)
         for (lever in levers) scene.add(lever)

@@ -24,7 +24,9 @@ open class Entity() {
     }
 
     var name = "unknown"
-    var skin = "none"
+    var skinBody: Skins.Body = Skins.Body.none
+    var skinArmor: Skins.Armor = Skins.Armor.none
+    var skinHead: Skins.Head = Skins.Head.none
     var id = lastId++
     var src = Point2d()
     var dst = Point2d()
@@ -257,7 +259,19 @@ class ChangeActionException(val action: suspend () -> Unit) : Exception()
 fun PacketSendChannel.sendEntityAppear(vararg entities: Entity, now: Long = System.currentTimeMillis()) {
     this@sendEntityAppear.send(EntityUpdates(now, entities.map {
         it.run {
-            EntityUpdates.EntityUpdate(id, skin, src.x, src.y, srcTime, dst.x, dst.y, dstTime, lookDirection)
+            EntityUpdates.EntityUpdate(
+                entityId = id,
+                skinBodyId = skinBody.id,
+                skinArmorId = skinArmor.id,
+                skinHeadId = skinHead.id,
+                srcX = src.x,
+                srcY = src.y,
+                srcTime = srcTime,
+                dstX = dst.x,
+                dstY = dst.y,
+                dstTime = dstTime,
+                direction = lookDirection
+            )
         }
     }))
 }
