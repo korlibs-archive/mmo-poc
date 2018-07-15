@@ -3,6 +3,7 @@ package mmo.server
 import com.soywiz.klock.*
 import com.soywiz.kmem.*
 import com.soywiz.korio.i18n.Language
+import com.soywiz.korma.*
 import com.soywiz.korma.geom.*
 import com.soywiz.korma.interpolation.*
 import kotlinx.coroutines.experimental.*
@@ -27,9 +28,10 @@ open class Entity() {
     var skinBody: Skins.Body = Skins.Body.none
     var skinArmor: Skins.Armor = Skins.Armor.none
     var skinHead: Skins.Head = Skins.Head.none
+    var skinHair: Skins.Hair = Skins.Hair.none
     var id = lastId++
-    var src = Point2d()
-    var dst = Point2d()
+    var src = MPoint2d()
+    var dst = MPoint2d()
     var srcTime = 0L
     var dstTime = 0L
     val totalTime get() = dstTime - srcTime
@@ -191,25 +193,24 @@ abstract class Actor() : Entity() {
         this.dstTime = 0L
     }
 
-    fun setPositionTo(pos: IPoint2d) = setPositionTo(pos.x, pos.y)
+    fun setPositionTo(pos: Point) = setPositionTo(pos.x, pos.y)
 
-    suspend fun moveBy(dx: Number, dy: Number) = moveTo(getCurrentPosition() + Point2d(dx, dy))
-    suspend fun moveTo(x: Number, y: Number) = moveTo(Point2d(x, y))
+    suspend fun moveBy(dx: Number, dy: Number) = moveTo(getCurrentPosition() + Point(dx, dy))
+    suspend fun moveTo(x: Number, y: Number) = moveTo(Point(x, y))
 
-    suspend fun moveBy(delta: IPoint2d) = moveTo(getCurrentPosition() + Point2d(delta.x, delta.y))
-    suspend fun moveTo(pos: IPoint2d) = moveTo(Point2d(pos.x, pos.y))
+    suspend fun moveBy(delta: Point) = moveTo(getCurrentPosition() + Point(delta.x, delta.y))
 
-    fun getCurrentPosition(now: Long = System.currentTimeMillis()): Point2d {
+    fun getCurrentPosition(now: Long = System.currentTimeMillis()): Point {
         if (now > dstTime) return dst
         val elapsedTime = now - srcTime
         val ratio = if (totalTime > 0) (elapsedTime.toDouble() / totalTime.toDouble()).clamp(0.0, 1.0) else 1.0
-        return Point2d(
+        return Point(
             interpolate(src.x, dst.x, ratio),
             interpolate(src.y, dst.y, ratio)
         )
     }
 
-    suspend fun moveTo(point: Point2d) {
+    suspend fun moveTo(point: Point) {
         val now = System.currentTimeMillis()
         val dist = (src - point).length
         val time = dist / speed
@@ -218,8 +219,8 @@ abstract class Actor() : Entity() {
         srcTime = now
         dstTime = now + (time.seconds).milliseconds
 
-        src = currentSrc.copy()
-        dst = point.copy()
+        src = MVector2(currentSrc)
+        dst = MVector2(point)
 
         container?.sendEntityAppear(this, now = now)
         wait(time.seconds)
@@ -261,9 +262,7 @@ fun PacketSendChannel.sendEntityAppear(vararg entities: Entity, now: Long = Syst
         it.run {
             EntityUpdates.EntityUpdate(
                 entityId = id,
-                skinBodyId = skinBody.id,
-                skinArmorId = skinArmor.id,
-                skinHeadId = skinHead.id,
+                skin = SkinInfo(skinBody.id, skinArmor.id, skinHead.id, skinHair.id),
                 srcX = src.x,
                 srcY = src.y,
                 srcTime = srcTime,

@@ -1,6 +1,38 @@
 rootProject.name = 'mmo-poc'
 
-include 'mmo',
-        'mmo:jvm',
-        'mmo:js',
-        'translations'
+enableFeaturePreview('GRADLE_METADATA')
+
+def nativeEnabled() {
+    return System.getenv("CI") != "true"
+}
+
+def registerVersion(artifactName, path) {
+    def fpath = path as File
+    if (fpath.exists()) {
+        include ":$artifactName"
+        findProject(":$artifactName")?.projectDir = fpath
+    }
+}
+
+def registerProject1(name, desc, rootPath = name) {
+    registerVersion("$name-common", file("$rootPath/$name/common"))
+    registerVersion("$name-jvm", file("$rootPath/$name/jvm"))
+    registerVersion("$name-js", file("$rootPath/$name/js"))
+    if (nativeEnabled()) {
+        registerVersion("$name-native", file("$rootPath/$name/native"))
+    }
+}
+
+def registerProject2(name, rootPath, desc) {
+    registerProject1(name, desc, rootPath)
+}
+
+def registerProject2Jvm(name, rootPath, desc) {
+    include ":$name"
+    findProject(":$name")?.projectDir = file("$name")
+}
+
+// Generator
+registerProject1('mmo', 'mmo', ".")
+registerProject1('kuyo', 'kuyo', "minigames")
+registerProject1('translations', 'translations', ".")

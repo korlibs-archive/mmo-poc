@@ -32,6 +32,14 @@ object Skins {
         companion object : Container<Head>("head/", values().toList())
     }
 
+    enum class Hair(override val id: Int) : Skin {
+        none(0),
+        pelo1(1),
+        ;
+
+        companion object : Container<Hair>("hair/", values().toList())
+    }
+
     enum class Armor(override val id: Int) : Skin {
         none(0),
         armor1(1),

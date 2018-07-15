@@ -15,9 +15,9 @@ and both communicate by serializing using [kotlinx.serialization](https://github
 ### Some commands
 
 * Compile JS and run the backend serving the client: `./gradlew runAll`
-* Run the backend only (JVM): `./gradlew :mmo:jvm:runServer`
-* Run the frontend only (JVM): `./gradlew :mmo:jvm:runClient`
-* Run the frontend only (JS): `./gradlew :mmo:js:buildAndCopy`
+* Run the backend only (JVM): `./gradlew :mmo-jvm:runServer`
+* Run the frontend only (JVM): `./gradlew :mmo-jvm:runClient`
+* Run the frontend only (JS): `./gradlew :mmo-js:buildAndCopy`
 
 ### Technical details
 

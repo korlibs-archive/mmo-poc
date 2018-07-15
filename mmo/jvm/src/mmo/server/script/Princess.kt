@@ -2,6 +2,7 @@ package mmo.server.script
 
 import com.soywiz.klock.*
 import com.soywiz.korge.tiled.*
+import com.soywiz.korma.*
 import com.soywiz.korma.geom.*
 import kotlinx.coroutines.experimental.*
 import mmo.server.*
@@ -37,13 +38,13 @@ class Princess(scene: ServerScene) : Npc() {
 
     val leversInPosition get() = expectedLeversDirection == actualLeversDirection
 
-    val pos1 = map.getObjectPosByName("princess1") ?: IPoint2d(0, 0)
-    val pos2 = map.getObjectPosByName("princess2") ?: IPoint2d(0, 0)
-    val pos3 = map.getObjectPosByName("princess3") ?: IPoint2d(0, 0)
+    val pos1 = map.getObjectPosByName("princess1") ?: Point(0, 0)
+    val pos2 = map.getObjectPosByName("princess2") ?: Point(0, 0)
+    val pos3 = map.getObjectPosByName("princess3") ?: Point(0, 0)
 
     init {
         println("Princess($pos1, $pos2, $pos3)")
-        src = Point2d(pos1)
+        setPositionTo(pos1)
         skinBody = Skins.Body.princess1
         name = "Princess"
         scene.add(this)
@@ -54,11 +55,11 @@ class Princess(scene: ServerScene) : Npc() {
         while (true) {
             moveTo(pos1)
             moveTo(pos2)
-            wait(0.5.seconds)
+            wait(1.5.seconds)
             moveTo(pos3)
             val people = container?.users?.size ?: 0
             say("Will someone else come?\nWe are already %d!", people + 1)
-            wait(1.seconds)
+            wait(2.seconds)
         }
     }
 
@@ -66,7 +67,7 @@ class Princess(scene: ServerScene) : Npc() {
         say("Let's keep things as they were before...")
         for (lever in levers) {
             if (lever.on) {
-                moveTo(Point2d(lever.pos) + IPoint2d(0, 1))
+                moveTo(lever.pos + Point(0, 1))
                 lookAt(CharDirection.UP)
                 lever.on = false
                 delay(300)

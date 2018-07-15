@@ -32,6 +32,7 @@ object Experiments {
         println(deserializePacket(packet))
     }
 }
+val gameContext = newSingleThreadContext("MySingleThread")
 
 fun main(args: Array<String>) {
     embeddedServer(Netty, port = 8080) {
@@ -60,31 +61,35 @@ fun main(args: Array<String>) {
             routing {
                 static("/") {
                     webSocket {
-                        delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
-                        val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
+                        launch(gameContext) {
+                            println(Thread.currentThread())
+                            delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
+                            val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
 
-                        val user = User(object : PacketSendChannel {
-                            override fun send(packet: ServerPacket) {
-                                //println("OFFERING: $packet")
-                                sendQueue.offer(packet)
+                            val user = User(object : PacketSendChannel {
+                                override fun send(packet: ServerPacket) {
+                                    //println("OFFERING: $packet")
+                                    sendQueue.offer(packet)
+                                }
+                            }).apply {
+                                this.skinBody = Skins.Body.chubby
+                                this.skinArmor = Skins.Armor.armor1
+                                this.skinHead = Skins.Head.elf1
+                                this.skinHair = Skins.Hair.pelo1
+                                this.setPositionTo(4, 4)
                             }
-                        }).apply {
-                            this.skinBody = Skins.Body.chubby
-                            this.skinArmor = Skins.Armor.armor1
-                            this.skinHead = Skins.Head.elf1
-                            this.setPositionTo(4, 4)
-                        }
 
-                        websocketWriteProcess(coroutineContext, this, user, sendQueue)
-                        user.send(UserSetId(user.id))
+                            websocketWriteProcess(coroutineContext, this@webSocket, user, sendQueue)
+                            user.send(UserSetId(user.id))
 
-                        try {
-                            mainScene.add(user)
-                            user.sendAllEntities(user.container)
-                            websocketReadProcess(user)
-                        } finally {
-                            mainScene.remove(user)
-                        }
+                            try {
+                                mainScene.add(user)
+                                user.sendAllEntities(user.container)
+                                websocketReadProcess(user)
+                            } finally {
+                                mainScene.remove(user)
+                            }
+                        }.join()
                     }
 
                     default(File(webFolder, "index.html"))

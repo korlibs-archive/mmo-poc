@@ -16,30 +16,9 @@ apply plugin: 'application'
 
 mainClassName = "mmo.server.BackendKt"
 
-repositories {
-    mavenLocal()
-    jcenter()
-    maven { url "https://dl.bintray.com/kotlin/kotlinx" }
-    maven { url "https://dl.bintray.com/kotlin/ktor" }
-    maven { url "https://dl.bintray.com/soywiz/soywiz" }
-    maven { url "https://kotlin.bintray.com/kotlinx" }
-}
-
-sourceSets {
-    main.kotlin.srcDirs += "src"
-    main.resources.srcDirs += "resources"
-    main.resources.srcDirs += "../resources"
-    test.kotlin.srcDirs += "test"
-    test.resources.srcDirs += "testresources"
-}
-
 dependencies {
-    expectedBy project(":mmo")
-
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serialization_version"
-
-    compile "com.soywiz:korge-jvm:$korge_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+    compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationVersion"
 
     compile "io.ktor:ktor-server-netty:$ktor_version"
     compile "io.ktor:ktor-websockets:$ktor_version"
@@ -48,10 +27,6 @@ dependencies {
     compile "io.ktor:ktor-jackson:$ktor_version"
 
     compile "ch.qos.logback:logback-classic:$logback_version"
-
-    testCompile "junit:junit:4.12"
-    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 }
 
 compileKotlin {

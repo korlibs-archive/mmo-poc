@@ -3,7 +3,7 @@ package mmo.client
 import com.soywiz.klock.*
 import com.soywiz.klogger.*
 import com.soywiz.kmem.*
-import com.soywiz.korge.component.*
+import com.soywiz.korge.component.docking.*
 import com.soywiz.korge.html.*
 import com.soywiz.korge.input.*
 import com.soywiz.korge.resources.*
@@ -113,22 +113,29 @@ class ClientEntity(
         anchorX = 0.5
         anchorY = 1.0
     }
+    val imageHair = views.image(views.transparentTexture).apply {
+        anchorX = 0.5
+        anchorY = 1.0
+    }
     val text = views.text("", textSize = 8.0)
     val view = views.container().apply {
         addChild(imageBody)
         addChild(imageArmor)
         addChild(imageHead)
+        addChild(imageHair)
         addChild(text)
     }
     var skinBody: CharacterSkin = rm.emptySkin
     var skinArmor: CharacterSkin = rm.emptySkin
     var skinHead: CharacterSkin = rm.emptySkin
+    var skinHair: CharacterSkin = rm.emptySkin
 
-    fun setSkin(body: Skins.Body, armor: Skins.Armor, head: Skins.Head) {
+    fun setSkin(body: Skins.Body, armor: Skins.Armor, head: Skins.Head, hair: Skins.Hair) {
         launch(coroutineContext) {
             imageBody.tex = rm.getSkin(Skins.Body.prefix, body.name).apply { skinBody = this }[direction.id, 0]
             imageArmor.tex = rm.getSkin(Skins.Armor.prefix, armor.name).apply { skinArmor = this }[direction.id, 0]
             imageHead.tex = rm.getSkin(Skins.Head.prefix, head.name).apply { skinHead = this }[direction.id, 0]
+            imageHair.tex = rm.getSkin(Skins.Hair.prefix, hair.name).apply { skinHair = this }[direction.id, 0]
         }
     }
 
@@ -142,6 +149,13 @@ class ClientEntity(
 
     var moving: Promise<Unit>? = null
     var direction = CharDirection.DOWN
+
+    fun setSkinTex(dir: Int, frame: Int) {
+        imageBody.tex = skinBody[dir, frame]
+        imageArmor.tex = skinArmor[dir, frame]
+        imageHead.tex = skinHead[dir, frame]
+        imageHair.tex = skinHair[dir, frame]
+    }
 
     fun move(src: Point2d, dst: Point2d, totalTime: TimeSpan) {
         moving?.cancel()
@@ -162,23 +176,17 @@ class ClientEntity(
             view.tween(view::x[src.x, dst.x], view::y[src.y, dst.y], time = totalTime) { step ->
                 val elapsed = totalTime.seconds * step
                 val frame = (elapsed / 0.1).toInt()
-                imageBody.tex = skinBody[direction.id, frame % CharacterSkin.COLS]
-                imageArmor.tex = skinArmor[direction.id, frame % CharacterSkin.COLS]
-                imageHead.tex = skinHead[direction.id, frame % CharacterSkin.COLS]
+                setSkinTex(direction.id, frame % CharacterSkin.COLS)
                 listener.updatedEntityCoords(this)
             }
-            imageBody.tex = skinBody[direction.id, 1]
-            imageArmor.tex = skinArmor[direction.id, 1]
-            imageHead.tex = skinHead[direction.id, 1]
+            setSkinTex(direction.id, 1)
         }
     }
 
     fun lookAt(direction: CharDirection) {
         this.direction = direction
         //println("lookAt.DIRECTION[$this]: $direction")
-        imageBody.tex = skinBody[direction.id, 0]
-        imageArmor.tex = skinArmor[direction.id, 0]
-        imageHead.tex = skinHead[direction.id, 0]
+        setSkinTex(direction.id, 0)
     }
 
     var sayPromise: Promise<Unit>? = null
@@ -293,9 +301,10 @@ class MmoMainScene(
                             }
 
                             entity.setSkin(
-                                Skins.Body[update.skinBodyId]!!,
-                                Skins.Armor[update.skinArmorId]!!,
-                                Skins.Head[update.skinHeadId]!!
+                                Skins.Body[update.skin.body]!!,
+                                Skins.Armor[update.skin.armor]!!,
+                                Skins.Head[update.skin.head]!!,
+                                Skins.Hair[update.skin.hair]!!
                             )
                             entity.lookAt(update.direction)
 
@@ -418,11 +427,7 @@ class MmoMainScene(
         //entityContainer.addChild(views.tiledMap(resourcesRoot["tileset1.tsx"].readTiledMap(views)))
         //entityContainer.addChild(views.tiledMap(resourcesRoot["tilemap1.tmx"].readTiledMap(views)))
         entityContainer.addChild(views.tiledMap(resourcesRoot["library1.tmx"].readTiledMap(views)))
-        entityContainer.addComponent(object : Component(entityContainer) {
-            override fun update(dtMs: Int) {
-                entityContainer.children.sortBy { it.y }
-            }
-        })
+        entityContainer.keepChildrenSortedByY()
         entityContainer
         conversationOverlay
         sceneView.addChild(views.simpleButton(128, 96, "SAY") {
