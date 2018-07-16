@@ -2,8 +2,6 @@ package mmo.server
 
 import com.soywiz.korge.tiled.*
 import com.soywiz.korio.*
-import com.soywiz.korio.async.*
-import com.soywiz.korio.async.EventLoop
 import com.soywiz.korio.file.std.*
 import com.soywiz.korio.i18n.Language
 import io.ktor.application.*
@@ -33,33 +31,40 @@ object Experiments {
     }
 }
 
-fun main(args: Array<String>) {
-    embeddedServer(Netty, port = 8080) {
-        runBlocking {
-            install(WebSockets)
-            install(ConditionalHeaders)
+val gameContext = newSingleThreadContext("MySingleThread")
 
-            Thread {
-                EventLoop.main {
-                    while (true) {
-                        sleepNextFrame()
-                    }
-                }
-            }.start()
+fun main(args: Array<String>) = Korio {
+    val webFolder =
+        listOf(".", "..", "../..", "../../..").map { File(it).absoluteFile["web"] }.firstOrNull { it.exists() }
+                ?: error("Can't find 'web' folder")
+    val webVfs = webFolder.toVfs()
 
-            val webFolder =
-                listOf(".", "..", "../..", "../../..").map { File(it).absoluteFile["web"] }.firstOrNull { it.exists() }
-                        ?: error("Can't find 'web' folder")
-            val webVfs = webFolder.toVfs()
+    println("webFolder:$webFolder")
 
-            println("webFolder:$webFolder")
+    val tilemap = webVfs["library1.tmx"].readTiledMapData()
+    println("Post TileMap")
+    val mainScene = ServerScene("lobby", tilemap)
 
-            val mainScene = ServerScene("lobby", webVfs["library1.tmx"].readTiledMapData())
-            Princess(mainScene).apply { start() }
+    println("Building Princess NPC")
+    Princess(mainScene).apply { start() }
 
-            routing {
-                static("/") {
-                    webSocket {
+    val server = embeddedServer(Netty, port = 8080) {
+        install(WebSockets)
+        install(ConditionalHeaders)
+
+        //tilemapLog.level = Logger.Level.TRACE
+        //Logger.defaultLevel = Logger.Level.TRACE
+
+        println("Pre TileMap")
+
+
+        println("Pre Routing")
+
+        routing {
+            static("/") {
+                webSocket {
+                    launch(gameContext) {
+                        //println(Thread.currentThread())
                         delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
                         val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
 
@@ -72,10 +77,11 @@ fun main(args: Array<String>) {
                             this.skinBody = Skins.Body.chubby
                             this.skinArmor = Skins.Armor.armor1
                             this.skinHead = Skins.Head.elf1
+                            this.skinHair = Skins.Hair.pelo1
                             this.setPositionTo(4, 4)
                         }
 
-                        websocketWriteProcess(coroutineContext, this, user, sendQueue)
+                        websocketWriteProcess(coroutineContext, this@webSocket, user, sendQueue)
                         user.send(UserSetId(user.id))
 
                         try {
@@ -85,14 +91,20 @@ fun main(args: Array<String>) {
                         } finally {
                             mainScene.remove(user)
                         }
-                    }
-
-                    default(File(webFolder, "index.html"))
-                    files(webFolder)
+                    }.join()
                 }
+
+                default(File(webFolder, "index.html"))
+                files(webFolder)
             }
         }
-    }.start(wait = true)
+
+        println("Post Routing")
+
+        println("Post runBlocking")
+    }
+    println("Pre Server Start")
+    server.start(wait = true)
 }
 
 fun websocketWriteProcess(
@@ -125,14 +137,14 @@ suspend fun DefaultWebSocketServerSession.websocketReadProcess(user: User) {
                 }
                 is ClientRequestMove -> {
                     moveJob?.cancel()
-                    moveJob = launch {
+                    moveJob = launch(coroutineContext) {
                         user.moveTo(packet.x, packet.y)
                     }
                 }
                 is ClientRequestInteract -> {
                     val entity = user.container?.entities?.firstOrNull { it.id == packet.entityId }
                     if (entity is Npc) {
-                        interfactionJob = launch {
+                        interfactionJob = launch(coroutineContext) {
                             entity.onUserInteraction(user)
                         }
                     }

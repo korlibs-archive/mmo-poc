@@ -4,7 +4,7 @@ import com.soywiz.korma.geom.*
 import mmo.server.*
 import mmo.shared.*
 
-class Lever(container: EntityContainer, val lever: Int, val pos: IPoint2d) : Npc() {
+class Lever(container: EntityContainer, val lever: Int, val pos: Point) : Npc() {
     companion object {
         val ON = CharDirection.DOWN
         val OFF = CharDirection.UP

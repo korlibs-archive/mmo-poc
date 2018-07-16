@@ -3,7 +3,7 @@ package mmo.client
 import com.soywiz.klock.*
 import com.soywiz.klogger.*
 import com.soywiz.kmem.*
-import com.soywiz.korge.component.*
+import com.soywiz.korge.component.docking.*
 import com.soywiz.korge.html.*
 import com.soywiz.korge.input.*
 import com.soywiz.korge.resources.*
@@ -24,6 +24,7 @@ import com.soywiz.korio.net.ws.*
 import com.soywiz.korma.geom.*
 import com.soywiz.korma.interpolation.*
 import com.soywiz.korui.light.*
+import kotlinx.coroutines.experimental.*
 import mmo.protocol.*
 import mmo.shared.*
 import kotlin.coroutines.experimental.*
@@ -113,22 +114,29 @@ class ClientEntity(
         anchorX = 0.5
         anchorY = 1.0
     }
+    val imageHair = views.image(views.transparentTexture).apply {
+        anchorX = 0.5
+        anchorY = 1.0
+    }
     val text = views.text("", textSize = 8.0)
     val view = views.container().apply {
         addChild(imageBody)
         addChild(imageArmor)
         addChild(imageHead)
+        addChild(imageHair)
         addChild(text)
     }
     var skinBody: CharacterSkin = rm.emptySkin
     var skinArmor: CharacterSkin = rm.emptySkin
     var skinHead: CharacterSkin = rm.emptySkin
+    var skinHair: CharacterSkin = rm.emptySkin
 
-    fun setSkin(body: Skins.Body, armor: Skins.Armor, head: Skins.Head) {
+    fun setSkin(body: Skins.Body, armor: Skins.Armor, head: Skins.Head, hair: Skins.Hair) {
         launch(coroutineContext) {
             imageBody.tex = rm.getSkin(Skins.Body.prefix, body.name).apply { skinBody = this }[direction.id, 0]
             imageArmor.tex = rm.getSkin(Skins.Armor.prefix, armor.name).apply { skinArmor = this }[direction.id, 0]
             imageHead.tex = rm.getSkin(Skins.Head.prefix, head.name).apply { skinHead = this }[direction.id, 0]
+            imageHair.tex = rm.getSkin(Skins.Hair.prefix, hair.name).apply { skinHair = this }[direction.id, 0]
         }
     }
 
@@ -140,14 +148,21 @@ class ClientEntity(
         listener.updatedEntityCoords(this)
     }
 
-    var moving: Promise<Unit>? = null
+    var moving: Deferred<Unit>? = null
     var direction = CharDirection.DOWN
+
+    fun setSkinTex(dir: Int, frame: Int) {
+        imageBody.tex = skinBody[dir, frame]
+        imageArmor.tex = skinArmor[dir, frame]
+        imageHead.tex = skinHead[dir, frame]
+        imageHair.tex = skinHair[dir, frame]
+    }
 
     fun move(src: Point2d, dst: Point2d, totalTime: TimeSpan) {
         moving?.cancel()
         view.x = src.x
         view.y = src.y
-        moving = launch(coroutineContext) {
+        moving = async(coroutineContext) {
             //println("move $src, $dst, time=$totalTime")
             val dx = (dst.x - src.x).absoluteValue
             val dy = (dst.y - src.y).absoluteValue
@@ -162,32 +177,26 @@ class ClientEntity(
             view.tween(view::x[src.x, dst.x], view::y[src.y, dst.y], time = totalTime) { step ->
                 val elapsed = totalTime.seconds * step
                 val frame = (elapsed / 0.1).toInt()
-                imageBody.tex = skinBody[direction.id, frame % CharacterSkin.COLS]
-                imageArmor.tex = skinArmor[direction.id, frame % CharacterSkin.COLS]
-                imageHead.tex = skinHead[direction.id, frame % CharacterSkin.COLS]
-                listener.updatedEntityCoords(this)
+                setSkinTex(direction.id, frame % CharacterSkin.COLS)
+                listener.updatedEntityCoords(this@ClientEntity)
             }
-            imageBody.tex = skinBody[direction.id, 1]
-            imageArmor.tex = skinArmor[direction.id, 1]
-            imageHead.tex = skinHead[direction.id, 1]
+            setSkinTex(direction.id, 1)
         }
     }
 
     fun lookAt(direction: CharDirection) {
         this.direction = direction
         //println("lookAt.DIRECTION[$this]: $direction")
-        imageBody.tex = skinBody[direction.id, 0]
-        imageArmor.tex = skinArmor[direction.id, 0]
-        imageHead.tex = skinHead[direction.id, 0]
+        setSkinTex(direction.id, 0)
     }
 
-    var sayPromise: Promise<Unit>? = null
+    var sayPromise: Deferred<Unit>? = null
     fun say(text: String) {
         sayPromise?.cancel()
         this.text.text = text
-        sayPromise = launch(coroutineContext) {
-            sleepMs(2000)
-            this.text.text = ""
+        sayPromise = async(coroutineContext) {
+            delay(2000)
+            this@ClientEntity.text.text = ""
         }
     }
 }
@@ -220,7 +229,7 @@ class ClientNpcConversation(
 }
 
 //fun tilePosToSpriteCoords(x: Double, y: Double): IPoint2d = IPoint2d(x * 32.0 + 16.0, y * 32.0 + 32.0)
-fun tilePosToSpriteCoords(x: Double, y: Double): IPoint2d = IPoint2d(x * 32.0 + 16.0, y * 32.0 + 16.0)
+fun tilePosToSpriteCoords(x: Double, y: Double): Point2d = Point2d(x * 32.0 + 16.0, y * 32.0 + 16.0)
 
 class MmoMainScene(
     val rm: ResourceManager,
@@ -257,8 +266,10 @@ class MmoMainScene(
             //camera.setTo(entity.view)
             //println("CAMERA(${camera.x}, ${camera.y})")
             //println("USER MOVED TO $entity")
-            camera.x = -(((entity.view.x - module.size.width.toDouble() / MAP_SCALE / 2) * MAP_SCALE).clamp(0.0, 5000.0))
-            camera.y = -(((entity.view.y - module.size.height.toDouble() / MAP_SCALE / 2) * MAP_SCALE).clamp(0.0, 5000.0))
+            camera.x =
+                    -(((entity.view.x - module.size.width.toDouble() / MAP_SCALE / 2) * MAP_SCALE).clamp(0.0, 5000.0))
+            camera.y =
+                    -(((entity.view.y - module.size.height.toDouble() / MAP_SCALE / 2) * MAP_SCALE).clamp(0.0, 5000.0))
         } else {
             //println("OTHER MOVED TO $entity")
         }
@@ -293,9 +304,10 @@ class MmoMainScene(
                             }
 
                             entity.setSkin(
-                                Skins.Body[update.skinBodyId]!!,
-                                Skins.Armor[update.skinArmorId]!!,
-                                Skins.Head[update.skinHeadId]!!
+                                Skins.Body[update.skin.body]!!,
+                                Skins.Armor[update.skin.armor]!!,
+                                Skins.Head[update.skin.head]!!,
+                                Skins.Hair[update.skin.hair]!!
                             )
                             entity.lookAt(update.direction)
 
@@ -362,7 +374,8 @@ class MmoMainScene(
                     }
                     is Pong -> {
                         latency = Klock.currentTimeMillis() - packet.pingTime
-                        coroutineContext.eventLoop.setTimeout(5000) {
+                        launch(coroutineContext) {
+                            delay(5.seconds)
                             sendPing()
                         }
                     }
@@ -418,11 +431,7 @@ class MmoMainScene(
         //entityContainer.addChild(views.tiledMap(resourcesRoot["tileset1.tsx"].readTiledMap(views)))
         //entityContainer.addChild(views.tiledMap(resourcesRoot["tilemap1.tmx"].readTiledMap(views)))
         entityContainer.addChild(views.tiledMap(resourcesRoot["library1.tmx"].readTiledMap(views)))
-        entityContainer.addComponent(object : Component(entityContainer) {
-            override fun update(dtMs: Int) {
-                entityContainer.children.sortBy { it.y }
-            }
-        })
+        entityContainer.keepChildrenSortedByY()
         entityContainer
         conversationOverlay
         sceneView.addChild(views.simpleButton(128, 96, "SAY") {

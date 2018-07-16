@@ -41,6 +41,14 @@ data class UserSetId(val entityId: Long) : ServerPacket
 data class UserBagUpdate(val item: String, val amount: Int) : ServerPacket
 
 @Serializable
+data class SkinInfo(
+    val body: Int,
+    val armor: Int,
+    val head: Int,
+    val hair: Int
+)
+
+@Serializable
 data class EntityUpdates(
     val currentTime: Long,
     val updates: List<EntityUpdate>
@@ -48,9 +56,7 @@ data class EntityUpdates(
     @Serializable
     data class EntityUpdate(
         val entityId: Long,
-        val skinBodyId: Int,
-        val skinArmorId: Int,
-        val skinHeadId: Int,
+        val skin: SkinInfo,
         val srcX: Double, val srcY: Double, val srcTime: Long,
         val dstX: Double, val dstY: Double, val dstTime: Long,
         val direction: CharDirection
