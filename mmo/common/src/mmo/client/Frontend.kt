@@ -24,6 +24,7 @@ import com.soywiz.korio.net.ws.*
 import com.soywiz.korma.geom.*
 import com.soywiz.korma.interpolation.*
 import com.soywiz.korui.light.*
+import kotlinx.coroutines.experimental.*
 import mmo.protocol.*
 import mmo.shared.*
 import kotlin.coroutines.experimental.*
@@ -147,7 +148,7 @@ class ClientEntity(
         listener.updatedEntityCoords(this)
     }
 
-    var moving: Promise<Unit>? = null
+    var moving: Deferred<Unit>? = null
     var direction = CharDirection.DOWN
 
     fun setSkinTex(dir: Int, frame: Int) {
@@ -161,7 +162,7 @@ class ClientEntity(
         moving?.cancel()
         view.x = src.x
         view.y = src.y
-        moving = launch(coroutineContext) {
+        moving = async(coroutineContext) {
             //println("move $src, $dst, time=$totalTime")
             val dx = (dst.x - src.x).absoluteValue
             val dy = (dst.y - src.y).absoluteValue
@@ -177,7 +178,7 @@ class ClientEntity(
                 val elapsed = totalTime.seconds * step
                 val frame = (elapsed / 0.1).toInt()
                 setSkinTex(direction.id, frame % CharacterSkin.COLS)
-                listener.updatedEntityCoords(this)
+                listener.updatedEntityCoords(this@ClientEntity)
             }
             setSkinTex(direction.id, 1)
         }
@@ -189,13 +190,13 @@ class ClientEntity(
         setSkinTex(direction.id, 0)
     }
 
-    var sayPromise: Promise<Unit>? = null
+    var sayPromise: Deferred<Unit>? = null
     fun say(text: String) {
         sayPromise?.cancel()
         this.text.text = text
-        sayPromise = launch(coroutineContext) {
-            sleepMs(2000)
-            this.text.text = ""
+        sayPromise = async(coroutineContext) {
+            delay(2000)
+            this@ClientEntity.text.text = ""
         }
     }
 }
@@ -228,7 +229,7 @@ class ClientNpcConversation(
 }
 
 //fun tilePosToSpriteCoords(x: Double, y: Double): IPoint2d = IPoint2d(x * 32.0 + 16.0, y * 32.0 + 32.0)
-fun tilePosToSpriteCoords(x: Double, y: Double): IPoint2d = IPoint2d(x * 32.0 + 16.0, y * 32.0 + 16.0)
+fun tilePosToSpriteCoords(x: Double, y: Double): Point2d = Point2d(x * 32.0 + 16.0, y * 32.0 + 16.0)
 
 class MmoMainScene(
     val rm: ResourceManager,
@@ -265,8 +266,10 @@ class MmoMainScene(
             //camera.setTo(entity.view)
             //println("CAMERA(${camera.x}, ${camera.y})")
             //println("USER MOVED TO $entity")
-            camera.x = -(((entity.view.x - module.size.width.toDouble() / MAP_SCALE / 2) * MAP_SCALE).clamp(0.0, 5000.0))
-            camera.y = -(((entity.view.y - module.size.height.toDouble() / MAP_SCALE / 2) * MAP_SCALE).clamp(0.0, 5000.0))
+            camera.x =
+                    -(((entity.view.x - module.size.width.toDouble() / MAP_SCALE / 2) * MAP_SCALE).clamp(0.0, 5000.0))
+            camera.y =
+                    -(((entity.view.y - module.size.height.toDouble() / MAP_SCALE / 2) * MAP_SCALE).clamp(0.0, 5000.0))
         } else {
             //println("OTHER MOVED TO $entity")
         }
@@ -371,7 +374,8 @@ class MmoMainScene(
                     }
                     is Pong -> {
                         latency = Klock.currentTimeMillis() - packet.pingTime
-                        coroutineContext.eventLoop.setTimeout(5000) {
+                        launch(coroutineContext) {
+                            delay(5.seconds)
                             sendPing()
                         }
                     }

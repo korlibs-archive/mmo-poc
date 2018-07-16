@@ -153,7 +153,7 @@ class KuyoDropView(val board: KuyoBoardView, private var model: KuyoDrop) : View
                 val explosions = boardModel.explode()
                 board.applyStep(explosions)
                 if (explosions.transforms.isNotEmpty()) {
-                    launch { board.chain(chains) }
+                    launch(coroutineContext) { board.chain(chains) }
                     chains++
                 }
             } while (explosions.transforms.isNotEmpty())

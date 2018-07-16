@@ -11,7 +11,7 @@ import mmo.shared.*
 class Princess(scene: ServerScene) : Npc() {
     val map = scene.map
 
-    val levers = (0 until 8).map { Lever(scene, it, map.getObjectPosByName("lever$it") ?: IPoint2d(0, 0)) }
+    val levers = (0 until 8).map { Lever(scene, it, map.getObjectPosByName("lever$it") ?: Point2d(0, 0)) }
     val WEST = false//Lever.OFF
     val EAST = true//Lever.ON
 

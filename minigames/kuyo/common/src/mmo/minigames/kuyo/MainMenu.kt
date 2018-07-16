@@ -28,7 +28,7 @@ class MainMenuScene : Scene() {
         this.root += localCoOp
         this.root += credits
 
-        launch {
+        launch(coroutineContext) {
             val result = optionSelector(
                 root, listOf(
                     endless to "endless",

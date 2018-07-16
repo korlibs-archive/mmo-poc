@@ -44,11 +44,11 @@ data class KuyoBoard(val board: Array2<Int> = Array2(6, 12) { 0 }) {
 
     val width get() = board.width
     val height get() = board.height
-    operator fun get(pos: Point): Int {
-        if ((pos.x < 0) || (pos.x >= width) || (pos.y >= board.height)) return BORDER
-        return board.tryGet(pos) ?: EMPTY
+    operator fun get(x: Int, y: Int): Int {
+        if ((x !in 0 until width) || (y !in 0 until height)) return BORDER
+        return board.tryGet(x, y) ?: EMPTY
     }
-
+    operator fun get(pos: Point): Int = get(pos.x.toInt(), pos.y.toInt())
     operator fun set(pos: Point, value: Int) = run { board.trySet(pos, value) }
     fun clone() = KuyoBoard(board.clone())
 }
@@ -96,14 +96,14 @@ fun KuyoBoard.gravity(): KuyoStep<KuyoTransform.Move> {
     val transforms = arrayListOf<KuyoTransform.Move>()
     for (x in 0 until width) {
         for (y in height - 1 downTo 0) {
-            val posSrc = IPoint(x, y)
+            val posSrc = Point(x, y)
             val color = dst[posSrc]
             // We have a chip here
             if (color != EMPTY) {
                 // Try moving down as much as possible
                 for (y2 in 1 until height + 1 - y) {
-                    val posDst = IPoint(x, y + y2)
-                    val posDstPrev = IPoint(x, y + y2 - 1)
+                    val posDst = Point(x, y + y2)
+                    val posDstPrev = Point(x, y + y2 - 1)
                     val c = dst[posDst]
                     if (c != EMPTY) {
                         if (posSrc != posDstPrev) {
@@ -131,7 +131,7 @@ fun KuyoBoard.explode(): KuyoStep<KuyoTransform.Explode> {
         explored += p
         val color = dst[p]
 
-        val deltas = listOf(IPoint(-1, 0), IPoint(+1, 0), IPoint(0, -1), IPoint(0, +1))
+        val deltas = listOf(Point(-1, 0), Point(+1, 0), Point(0, -1), Point(0, +1))
         val nexts = deltas.map { p + it }
 
         return listOf(p) + nexts.filter { dst[it] == color }.flatMap { explore(it) }
@@ -139,7 +139,7 @@ fun KuyoBoard.explode(): KuyoStep<KuyoTransform.Explode> {
 
     for (x in 0 until width) {
         for (y in 0 until height) {
-            val p = IPoint(x, y)
+            val p = Point(x, y)
             if (p !in explored && dst[p] != EMPTY) {
                 val items = explore(p)
                 if (items.size >= 4) {
@@ -185,7 +185,7 @@ fun KuyoDrop.tryMove(delta: Point, board: KuyoBoard): KuyoDrop? {
 }
 
 fun KuyoDrop.tryRotate(direction: Int, board: KuyoBoard): KuyoDrop? {
-    val deltas = listOf(IPoint(0, 0), IPoint(-1, 0), IPoint(+1, 0), IPoint(0, -1))
+    val deltas = listOf(Point(0, 0), Point(-1, 0), Point(+1, 0), Point(0, -1))
     for (delta in deltas) {
         val newDrop = this.displaced(delta).rotated(direction)
         if (board.canMove(newDrop)) return newDrop
@@ -225,7 +225,7 @@ fun KuyoBoard.toBoardString(): String {
     for (y in 0 until height) {
         var line = ""
         for (x in 0 until width) {
-            val v = this[IPoint(x, y)]
+            val v = this[Point(x, y)]
             line += when (v) {
                 0 -> '.'
                 else -> '0' + v

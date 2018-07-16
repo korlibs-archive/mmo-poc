@@ -14,6 +14,7 @@ import mmo.shared.*
 import org.jetbrains.annotations.*
 import java.util.concurrent.*
 import kotlin.collections.set
+import kotlin.coroutines.experimental.*
 
 open class Entity() {
     var container: EntityContainer? = null
@@ -166,7 +167,7 @@ abstract class Npc : Actor() {
     suspend fun run() {
         while (true) {
             try {
-                job = launch { myscript() }
+                job = launch(coroutineContext) { myscript() }
                 job?.join()
             } catch (e: Throwable) {
                 e.printStackTrace()
@@ -174,8 +175,11 @@ abstract class Npc : Actor() {
         }
     }
 
-    fun start() {
-        launch {
+    suspend fun start() {
+        println("start[0]")
+        //launch(coroutineContext) {
+        launch(kotlinx.coroutines.experimental.DefaultDispatcher) {
+            println("start[1]")
             run()
         }
     }
