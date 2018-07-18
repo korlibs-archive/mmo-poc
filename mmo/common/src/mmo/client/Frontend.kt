@@ -6,6 +6,7 @@ import com.soywiz.kmem.*
 import com.soywiz.korge.component.docking.*
 import com.soywiz.korge.html.*
 import com.soywiz.korge.input.*
+import com.soywiz.korge.render.*
 import com.soywiz.korge.resources.*
 import com.soywiz.korge.scene.*
 import com.soywiz.korge.service.*
@@ -67,22 +68,37 @@ class CharacterSkin(val base: TileSet) {
     operator fun get(row: Int, col: Int) = items[row][col]
 }
 
+// @TODO: Resource unloading, LCU and stuff
 class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
-    val queue = AsyncThread()
-    val skins = LinkedHashMap<String, CharacterSkin>()
+    private val queue = AsyncThread()
+    private val skins = LinkedHashMap<String, CharacterSkin>()
+    private val bitmaps = LinkedHashMap<String, Bitmap32>()
+    private val textures = LinkedHashMap<String, Texture>()
     val emptySkin = CharacterSkin(TileSet(views, listOf(views.transparentTexture), 1, 1))
+
+    suspend fun getBitmap(file: String): Bitmap32 {
+        return bitmaps.getOrPut(file) {
+            try {
+                if (file == "none" || file == "") {
+                    Bitmap32(1, 1)
+                } else {
+                    resourcesRoot[file].readBitmapOptimized(views.imageFormats).toBMP32()
+                }
+            } catch (e: Throwable) {
+                Bitmap32(1, 1)
+            }
+        }
+    }
+
+    suspend fun getTexture(file: String): Texture {
+        return textures.getOrPut(file) {
+            views.texture(getBitmap(file))
+        }
+    }
 
     suspend fun getSkin(prefix: String, skinName: String): CharacterSkin = queue {
         skins.getOrPut(skinName) {
-            val bitmap = try {
-                if (skinName == Skins.Body.none.name) {
-                    Bitmap32(64, 64)
-                } else {
-                    resourcesRoot["chara/$prefix$skinName.png"].readBitmapOptimized(views.imageFormats).toBMP32()
-                }
-            } catch (e: Throwable) {
-                Bitmap32(64, 64)
-            }
+            val bitmap = getBitmap(if (skinName == Skins.Body.none.mname) "" else "chara/$prefix$skinName.png")
             val bitmaps = TileSet.extractBitmaps(bitmap, bitmap.width / 3, bitmap.height / 4, 3, 3 * 4)
             val tileset = TileSet.fromBitmaps(views, bitmap.width / 3, bitmap.height / 4, bitmaps)
             CharacterSkin(tileset)
@@ -118,12 +134,22 @@ class ClientEntity(
         anchorX = 0.5
         anchorY = 1.0
     }
+    val quest = views.image(views.transparentTexture).apply {
+        anchorY = 2.3
+        anchorX = 0.5
+    }
     val text = views.text("", textSize = 8.0)
-    val view = views.container().apply {
+    val rview = views.container().apply {
+        name = "entity$id"
         addChild(imageBody)
         addChild(imageArmor)
         addChild(imageHead)
         addChild(imageHair)
+        addChild(quest)
+    }
+    val view = views.container().apply {
+        name = "entity$id"
+        addChild(rview)
         addChild(text)
     }
     var skinBody: CharacterSkin = rm.emptySkin
@@ -132,11 +158,11 @@ class ClientEntity(
     var skinHair: CharacterSkin = rm.emptySkin
 
     fun setSkin(body: Skins.Body, armor: Skins.Armor, head: Skins.Head, hair: Skins.Hair) {
-        launch(coroutineContext) {
-            imageBody.tex = rm.getSkin(Skins.Body.prefix, body.name).apply { skinBody = this }[direction.id, 0]
-            imageArmor.tex = rm.getSkin(Skins.Armor.prefix, armor.name).apply { skinArmor = this }[direction.id, 0]
-            imageHead.tex = rm.getSkin(Skins.Head.prefix, head.name).apply { skinHead = this }[direction.id, 0]
-            imageHair.tex = rm.getSkin(Skins.Hair.prefix, hair.name).apply { skinHair = this }[direction.id, 0]
+        launch(coroutineContext, start = CoroutineStart.UNDISPATCHED) {
+            imageBody.tex = rm.getSkin(Skins.Body.prefix, body.mname).apply { skinBody = this }[direction.id, 0]
+            imageArmor.tex = rm.getSkin(Skins.Armor.prefix, armor.mname).apply { skinArmor = this }[direction.id, 0]
+            imageHead.tex = rm.getSkin(Skins.Head.prefix, head.mname).apply { skinHead = this }[direction.id, 0]
+            imageHair.tex = rm.getSkin(Skins.Hair.prefix, hair.mname).apply { skinHair = this }[direction.id, 0]
         }
     }
 
@@ -197,6 +223,18 @@ class ClientEntity(
         sayPromise = async(coroutineContext) {
             delay(2000)
             this@ClientEntity.text.text = ""
+        }
+    }
+
+    fun setQuestSatus(status: QuestStatus) {
+        println("QuestStatus = $status")
+        launch(coroutineContext, start = CoroutineStart.UNDISPATCHED) {
+            quest.tex = when (status) {
+                QuestStatus.NONE -> rm.getTexture("")
+                QuestStatus.NEW -> rm.getTexture("quest-availiable.png")
+                QuestStatus.UNCOMPLETE -> rm.getTexture("quest.png")
+                QuestStatus.COMPLETE -> rm.getTexture("quest-ready.png")
+            }
         }
     }
 }
@@ -275,6 +313,18 @@ class MmoMainScene(
         }
     }
 
+    fun getOrCreateEntityById(id: Long): ClientEntity {
+        return entitiesById.getOrPut(id) {
+            ClientEntity(rm, coroutineContext, id, views, this@MmoMainScene).apply {
+                rview.onClick {
+                    ws?.sendPacket(ClientRequestInteract(id))
+                }
+                entityContainer.addChild(view)
+                entitiesById[id] = this
+            }
+        }
+    }
+
     suspend fun init() {
         try {
             ws = WebSocketClient((injector.getOrNull() ?: ServerEndPoint("ws://127.0.0.1:8080/")).endpoint)
@@ -293,15 +343,7 @@ class MmoMainScene(
                     is EntityUpdates -> {
                         val now = packet.currentTime
                         for (update in packet.updates) {
-                            val entity = entitiesById.getOrPut(update.entityId) {
-                                ClientEntity(rm, coroutineContext, update.entityId, views, this@MmoMainScene).apply {
-                                    view.onClick {
-                                        ws?.sendPacket(ClientRequestInteract(id))
-                                    }
-                                    entityContainer.addChild(view)
-                                    entitiesById[id] = this
-                                }
-                            }
+                            val entity = getOrCreateEntityById(update.entityId)
 
                             entity.setSkin(
                                 Skins.Body[update.skin.body]!!,
@@ -381,8 +423,16 @@ class MmoMainScene(
                     }
                     is UserSetId -> {
                         userId = packet.entityId
-                        entitiesById[userId]?.let { this.updatedEntityCoords(it) }
-
+                        val user = entitiesById[userId]
+                        if (user != null) {
+                            this.updatedEntityCoords(user)
+                            //user.view.mouse.dettach()
+                            user.view.mouseEnabled = false
+                        }
+                    }
+                    is QuestUpdate -> {
+                        val entity = entitiesById[packet.entityId]
+                        entity?.setQuestSatus(packet.status)
                     }
                     else -> {
                         Console.error("Unhandled packet from server", packet)
@@ -434,17 +484,22 @@ class MmoMainScene(
         entityContainer.keepChildrenSortedByY()
         entityContainer
         conversationOverlay
-        sceneView.addChild(views.simpleButton(128, 96, "SAY") {
+        sceneView.addChild(views.simpleButton(160, 80, "SAY") {
             val text = browser.prompt("What to say?", "")
             ws?.sendPacket(ClientSay(text))
         })
+        sceneView.addChild(views.simpleButton(160, 80, "DEBUG") {
+            views.debugViews = !views.debugViews
+        }.apply { y = 80.0 })
         moneyText = views.text("", textSize = 48.0).apply {
             x = 256.0
             sceneView += this
+            mouseEnabled = false
         }
         latencyText = views.text("", textSize = 48.0).apply {
             x = 800.0
             sceneView += this
+            mouseEnabled = false
         }
         bagUpdated()
     }

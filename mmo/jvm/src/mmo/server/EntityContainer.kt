@@ -5,6 +5,7 @@ import mmo.protocol.*
 
 open class EntityContainer : PacketSendChannel {
     val entities = LinkedHashSet<Entity>()
+    inline val npcs get() = entities.filterIsInstance<Npc>()
     inline val users get() = entities.filterIsInstance<User>()
 
     fun add(entity: Entity) {
@@ -28,6 +29,14 @@ open class EntityContainer : PacketSendChannel {
 
     fun sendBut(but: Entity, packet: ServerPacket) {
         for (user in users) if (user != but) user.send(packet)
+    }
+
+    fun addUser(user: User) {
+        add(user)
+        user.sendAllEntities(user.container)
+        for (npc in npcs) {
+            npc.onUserAppeared(user)
+        }
     }
 }
 

@@ -10,6 +10,8 @@ interface BasePacket
 interface ClientPacket : BasePacket
 interface ServerPacket : BasePacket
 
+enum class QuestStatus { NONE, NEW, UNCOMPLETE, COMPLETE }
+
 // Client/Server Packets
 @Serializable
 data class Ping(val pingTime: Long) : ClientPacket, ServerPacket
@@ -47,6 +49,13 @@ data class SkinInfo(
     val head: Int,
     val hair: Int
 )
+
+@Serializable
+data class QuestUpdate(
+    val entityId: Long,
+    val status: QuestStatus
+) : ServerPacket {
+}
 
 @Serializable
 data class EntityUpdates(
@@ -122,5 +131,8 @@ val serializableClasses = listOf(
     ConversationClose::class,
     ConversationMoodSet::class,
     ConversationText::class,
-    ConversationOptions::class
+    ConversationOptions::class,
+
+    // Quests
+    QuestUpdate::class
 )

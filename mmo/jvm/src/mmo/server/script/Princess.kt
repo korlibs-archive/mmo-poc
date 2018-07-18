@@ -5,13 +5,18 @@ import com.soywiz.korge.tiled.*
 import com.soywiz.korma.*
 import com.soywiz.korma.geom.*
 import kotlinx.coroutines.experimental.*
+import mmo.protocol.*
 import mmo.server.*
 import mmo.shared.*
 
-class Princess(scene: ServerScene) : Npc() {
+class Princess(val scene: ServerScene) : Npc() {
     val map = scene.map
 
-    val levers = (0 until 8).map { Lever(scene, it, map.getObjectPosByName("lever$it") ?: Point2d(0, 0)) }
+    val levers = (0 until 8).map {
+        Lever(scene, it, map.getObjectPosByName("lever$it") ?: Point2d(0, 0)) {
+            leversUpdated()
+        }
+    }
     val WEST = false//Lever.OFF
     val EAST = true//Lever.ON
 
@@ -45,7 +50,10 @@ class Princess(scene: ServerScene) : Npc() {
     init {
         println("Princess($pos1, $pos2, $pos3)")
         setPositionTo(pos1)
-        skinBody = Skins.Body.princess1
+        skinBody = Skins.Body.chubbyGirl
+        skinHair = Skins.Hair.girl1
+        skinHead = Skins.Head.girl
+        skinArmor = Skins.Armor.princess_dress1
         name = "Princess"
         scene.add(this)
         for (lever in levers) scene.add(lever)
@@ -106,6 +114,8 @@ class Princess(scene: ServerScene) : Npc() {
                     //println("expectedLeversDirection=$expectedLeversDirection")
                     //println("actualLeversDirection=$actualLeversDirection")
                     option("What are those 8 levers?") {
+                        user.setFlag("lever-puzzle-requested", true)
+                        user.updateQuest()
                         say("There are eight soldiers marching to\nthe battle waiting for them in the west.")
                         say("The soldier in the front, turns to the rest,\nand makes them a strange request:")
                         say("Half of us, should turn towards most of the others\nare, while the other half should do the opposite.")
@@ -120,6 +130,7 @@ class Princess(scene: ServerScene) : Npc() {
                             user.addItems(gold, amount = 5000)
                             user.addItems(experience, amount = 5000)
                         }
+                        user.updateQuest()
                         changeMainScriptTo { restoreLevers() }
                         say("Good job!")
                         close()
@@ -131,5 +142,31 @@ class Princess(scene: ServerScene) : Npc() {
                 }
             }
         }
+    }
+
+    fun User.updateQuest() {
+        send(QuestUpdate(this@Princess.id, getQuestStatus(this)))
+    }
+
+    override fun onUserAppeared(user: User) {
+        user.updateQuest()
+    }
+
+    fun leversUpdated() {
+        for (user in scene.users) user.updateQuest()
+    }
+
+    fun getQuestStatus(user: User): QuestStatus {
+        val completedLevers = user.getFlag("princess-levers")
+        val questStarted = user.getFlag("lever-puzzle-requested")
+
+        if (!completedLevers) {
+            when {
+                leversInPosition -> return QuestStatus.COMPLETE
+                !questStarted -> return QuestStatus.NEW
+                questStarted -> return QuestStatus.UNCOMPLETE
+            }
+        }
+        return QuestStatus.NONE
     }
 }
