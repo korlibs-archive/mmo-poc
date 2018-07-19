@@ -4,7 +4,7 @@ import com.soywiz.korma.geom.*
 import mmo.server.*
 import mmo.shared.*
 
-class Lever(container: EntityContainer, val lever: Int, val pos: Point) : Npc() {
+class Lever(container: EntityContainer, val lever: Int, val pos: Point, val onChanged: () -> Unit = {}) : Npc() {
     companion object {
         val ON = CharDirection.DOWN
         val OFF = CharDirection.UP
@@ -28,6 +28,7 @@ class Lever(container: EntityContainer, val lever: Int, val pos: Point) : Npc() 
         set(value) {
             lookAt(if (value) ON else OFF)
             //println("$name: $on")
+            onChanged()
         }
 
     override suspend fun onUserInteraction(user: User) {

@@ -12,7 +12,8 @@ fun main(args: Array<String>) {
     val endpoint = ServerEndPoint("$protocol://${document.location?.host}/")
     console.log("endpoint: $endpoint")
 
-    Korge(MmoModule(), injector = AsyncInjector().apply {
+    //Korge(MmoModule(), debug = true, injector = AsyncInjector().apply {
+    Korge(MmoModule(), debug = false, injector = AsyncInjector().apply {
         this.mapInstance(endpoint)
     })
 }

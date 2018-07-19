@@ -161,6 +161,9 @@ abstract class Npc : Actor() {
     open suspend fun onUserInteraction(user: User) {
     }
 
+    open fun onUserAppeared(user: User) {
+    }
+
     var job: Job? = null
     var myscript: suspend () -> Unit = { script() }
 

@@ -82,11 +82,10 @@ fun main(args: Array<String>) = Korio {
                         }
 
                         websocketWriteProcess(coroutineContext, this@webSocket, user, sendQueue)
-                        user.send(UserSetId(user.id))
 
                         try {
-                            mainScene.add(user)
-                            user.sendAllEntities(user.container)
+                            mainScene.addUser(user)
+                            user.send(UserSetId(user.id))
                             websocketReadProcess(user)
                         } finally {
                             mainScene.remove(user)
