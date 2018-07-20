@@ -50,10 +50,10 @@ class Princess(val scene: ServerScene) : Npc() {
     init {
         println("Princess($pos1, $pos2, $pos3)")
         setPositionTo(pos1)
-        skinBody = Skins.Body.chubbyGirl
-        skinHair = Skins.Hair.girl1
-        skinHead = Skins.Head.girl
-        skinArmor = Skins.Armor.princess_dress1
+        skinBody = Skins.Body.girl1
+        skinHair = Skins.Hair.princess
+        skinHead = Skins.Head.princess
+        skinArmor = Skins.Armor.princess_dress3
         name = "Princess"
         scene.add(this)
         for (lever in levers) scene.add(lever)
