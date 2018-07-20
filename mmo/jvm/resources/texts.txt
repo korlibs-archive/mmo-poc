@@ -63,3 +63,12 @@
 
 <en>Let's keep things as they were before...
 <es>Vamos a dejar las cosas como estaban...
+
+<en>Oh my!, these books are not sorted by name!
+<es>¡Dios mío!, ¡estos libros no están ordenados por nombre!
+
+<en>Done!
+<es>¡Listo!
+
+<en>Too bad, more work to be done here!
+<es>¡Qué mal!, ¡toca seguir trabajando!

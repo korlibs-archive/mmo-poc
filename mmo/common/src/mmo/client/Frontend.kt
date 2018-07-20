@@ -98,7 +98,7 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
 
     suspend fun getSkin(prefix: String, skinName: String): CharacterSkin = queue {
         skins.getOrPut(skinName) {
-            val bitmap = getBitmap(if (skinName == Skins.Body.none.mname) "" else "chara/$prefix$skinName.png")
+            val bitmap = getBitmap(if (skinName == Skins.Body.none.fileName) "" else "chara/$prefix$skinName.png")
             val bitmaps = TileSet.extractBitmaps(bitmap, bitmap.width / 3, bitmap.height / 4, 3, 3 * 4)
             val tileset = TileSet.fromBitmaps(views, bitmap.width / 3, bitmap.height / 4, bitmaps)
             CharacterSkin(tileset)
@@ -159,10 +159,10 @@ class ClientEntity(
 
     fun setSkin(body: Skins.Body, armor: Skins.Armor, head: Skins.Head, hair: Skins.Hair) {
         launch(coroutineContext, start = CoroutineStart.UNDISPATCHED) {
-            imageBody.tex = rm.getSkin(Skins.Body.prefix, body.mname).apply { skinBody = this }[direction.id, 0]
-            imageArmor.tex = rm.getSkin(Skins.Armor.prefix, armor.mname).apply { skinArmor = this }[direction.id, 0]
-            imageHead.tex = rm.getSkin(Skins.Head.prefix, head.mname).apply { skinHead = this }[direction.id, 0]
-            imageHair.tex = rm.getSkin(Skins.Hair.prefix, hair.mname).apply { skinHair = this }[direction.id, 0]
+            imageBody.tex = rm.getSkin(Skins.Body.prefix, body.fileName).apply { skinBody = this }[direction.id, 0]
+            imageArmor.tex = rm.getSkin(Skins.Armor.prefix, armor.fileName).apply { skinArmor = this }[direction.id, 0]
+            imageHead.tex = rm.getSkin(Skins.Head.prefix, head.fileName).apply { skinHead = this }[direction.id, 0]
+            imageHair.tex = rm.getSkin(Skins.Hair.prefix, hair.fileName).apply { skinHair = this }[direction.id, 0]
         }
     }
 
@@ -277,7 +277,7 @@ class MmoMainScene(
     val MAP_SCALE = 3.0
     var ws: WebSocketClient? = null
     val entitiesById = LinkedHashMap<Long, ClientEntity>()
-    val background by lazy { views.solidRect(1280 / 3.0, 720 / 3.0, RGBA(0x1e, 0x28, 0x3c, 0xFF)) }
+    val background by lazy { views.solidRect(1280 / 3.0, 720 / 3.0, RGBAInt(0x1e, 0x28, 0x3c, 0xFF)) }
     val camera by lazy {
         views.camera().apply {
             scale = MAP_SCALE
@@ -510,7 +510,7 @@ fun Views.simpleButton(width: Int, height: Int, title: String, click: suspend ()
         val text = text(title, textSize = 52.0)
         text.format = Html.Format(align = Html.Alignment.MIDDLE_CENTER, size = 52)
         text.textBounds.setTo(0, 0, width, height)
-        addChild(views.solidRect(width, height, RGBA(0xa0, 0xa0, 0xff, 0x7f)))
+        addChild(views.solidRect(width, height, RGBAInt(0xa0, 0xa0, 0xff, 0x7f)))
         addChild(text)
         onClick {
             click()

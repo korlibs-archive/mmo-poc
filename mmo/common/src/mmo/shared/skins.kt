@@ -3,17 +3,18 @@ package mmo.shared
 object Skins {
     interface Skin{
         val id: Int
-        val mname: String
+        val name: String
+        val fileName: String
     }
 
     open class Container<T : Skin>(val prefix: String, val skins: List<T>) : Collection<T> by skins {
         val byId = skins.associateBy { it.id }
-        val byName = skins.associateBy { it.mname }
+        val byName = skins.associateBy { it.fileName } + skins.associateBy { it.name }
         operator fun get(id: Int) = byId[id]
         operator fun get(name: String) = byName[name]
     }
 
-    enum class Body(override val id: Int, rname: String? = null) : Skin {
+    enum class Body(override val id: Int, fileName: String? = null) : Skin {
         none(0),
         princess1(1),
         chubby(2),
@@ -22,7 +23,7 @@ object Skins {
         girl1(5, "girl1"),
         ;
 
-        override val mname = rname ?: name
+        override val fileName = fileName ?: name
 
         companion object : Container<Body>("body/", values().toList())
     }
@@ -35,7 +36,7 @@ object Skins {
         princess(4, "face-girl-princess")
         ;
 
-        override val mname = rname ?: name
+        override val fileName = rname ?: name
 
         companion object : Container<Head>("head/", values().toList())
     }
@@ -47,7 +48,7 @@ object Skins {
         princess(3, "hair-princess"),
         ;
 
-        override val mname = rname ?: name
+        override val fileName = rname ?: name
 
         companion object : Container<Hair>("hair/", values().toList())
     }
@@ -60,7 +61,7 @@ object Skins {
         princess_dress3(4, "dress-princess")
         ;
 
-        override val mname = rname ?: name
+        override val fileName = rname ?: name
 
         companion object : Container<Armor>("armor/", values().toList())
     }

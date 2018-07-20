@@ -18,7 +18,9 @@ import kotlinx.coroutines.experimental.channels.*
 import mmo.protocol.*
 import mmo.server.script.*
 import mmo.shared.*
+import org.jetbrains.kotlin.script.jsr223.*
 import java.io.*
+import javax.script.*
 import kotlin.coroutines.experimental.*
 import kotlin.reflect.*
 
@@ -47,6 +49,13 @@ fun main(args: Array<String>) = Korio {
 
     println("Building Princess NPC")
     Princess(mainScene).apply { start() }
+
+    val ktsEngine = ScriptEngineManager().getEngineByExtension("kts") as KotlinJsr223JvmLocalScriptEngine
+
+    val scriptedNpcs = tilemap.objectLayers.flatMap { it.objects }.filter { it.info.type == "npc" && "script" in it.objprops }
+    for (scriptedNpc in scriptedNpcs) {
+        KScriptNpc(ktsEngine, mainScene, scriptedNpc.name).apply { start() }
+    }
 
     val server = embeddedServer(Netty, port = 8080) {
         install(WebSockets)

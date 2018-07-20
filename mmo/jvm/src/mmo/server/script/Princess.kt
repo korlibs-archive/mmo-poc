@@ -1,6 +1,7 @@
 package mmo.server.script
 
 import com.soywiz.klock.*
+import com.soywiz.klogger.*
 import com.soywiz.korge.tiled.*
 import com.soywiz.korma.*
 import com.soywiz.korma.geom.*
@@ -10,6 +11,8 @@ import mmo.server.*
 import mmo.shared.*
 
 class Princess(val scene: ServerScene) : Npc() {
+    private val logger = Logger("NPC.Princess")
+
     val map = scene.map
 
     val levers = (0 until 8).map {
@@ -43,13 +46,15 @@ class Princess(val scene: ServerScene) : Npc() {
 
     val leversInPosition get() = expectedLeversDirection == actualLeversDirection
 
-    val pos1 = map.getObjectPosByName("princess1") ?: Point(0, 0)
-    val pos2 = map.getObjectPosByName("princess2") ?: Point(0, 0)
-    val pos3 = map.getObjectPosByName("princess3") ?: Point(0, 0)
+    val posList = (1..4).map { map.getObjectPosByName("princess$it") ?: Point(0, 0) }
+    val pos1 = posList[0]
+    val pos2 = posList[1]
+    val pos3 = posList[2]
+    val pos4 = posList[3]
 
     init {
-        println("Princess($pos1, $pos2, $pos3)")
-        setPositionTo(pos1)
+        logger.trace { "Princess($pos1, $pos2, $pos3, $pos4)" }
+        setPositionTo(pos3)
         skinBody = Skins.Body.girl1
         skinHair = Skins.Hair.princess
         skinHead = Skins.Head.princess
@@ -61,13 +66,14 @@ class Princess(val scene: ServerScene) : Npc() {
 
     override suspend fun script() {
         while (true) {
+            moveTo(pos4)
             moveTo(pos1)
-            moveTo(pos2)
             wait(1.5.seconds)
-            moveTo(pos3)
+            moveTo(pos2)
             val people = container?.users?.size ?: 0
             say("Will someone else come?\nWe are already %d!", people + 1)
             wait(2.seconds)
+            moveTo(pos3)
         }
     }
 

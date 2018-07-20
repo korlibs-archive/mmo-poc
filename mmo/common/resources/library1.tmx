@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" tiledversion="1.1.5" orientation="orthogonal" renderorder="right-down" width="30" height="30" tilewidth="32" tileheight="32" infinite="0" nextobjectid="22">
+<map version="1.0" tiledversion="1.1.5" orientation="orthogonal" renderorder="right-down" width="30" height="30" tilewidth="32" tileheight="32" infinite="0" nextobjectid="26">
  <tileset firstgid="1" source="library.tsx"/>
  <layer name="Capa de Patrones 1" width="30" height="30">
   <data encoding="csv">
@@ -138,13 +138,13 @@
 </data>
  </layer>
  <objectgroup name="objects">
-  <object id="2" name="princess1" type="waypoint" x="256" y="192" width="32" height="32">
+  <object id="2" name="princess1" type="waypoint" x="160" y="160" width="32" height="32">
    <properties>
     <property name="npc" value="Princess"/>
    </properties>
   </object>
-  <object id="9" name="princess2" type="waypoint" x="256" y="224" width="32" height="32"/>
-  <object id="10" name="princess3" type="waypoint" x="96" y="192" width="32" height="32"/>
+  <object id="9" name="princess2" type="waypoint" x="160" y="288" width="32" height="32"/>
+  <object id="10" name="princess3" type="waypoint" x="96" y="288" width="32" height="32"/>
   <object id="11" name="lever0" type="lever" x="96" y="96" width="32" height="32"/>
   <object id="12" name="lever1" type="lever" x="128" y="96" width="32" height="32"/>
   <object id="13" name="lever2" type="lever" x="160" y="96" width="32" height="32"/>
@@ -168,5 +168,35 @@
     <property name="npc" value="Kuyo"/>
    </properties>
   </object>
+  <object id="22" name="princess4" type="waypoint" x="96" y="160" width="32" height="32"/>
+  <object id="23" name="librarian" type="npc" x="512" y="128" width="32" height="32">
+   <properties>
+    <property name="armor" value="princess-dress"/>
+    <property name="body" value="chubby-girl"/>
+    <property name="hair" value="hair-girl1"/>
+    <property name="head" value="face-girl-princess"/>
+    <property name="name" value="Librarian"/>
+    <property name="script">while (true) {
+
+move(&quot;librarian2&quot;)
+look(&quot;up&quot;)
+say(&quot;Oh my!, these books are not sorted by name!&quot;)
+wait(4.0.seconds)
+say(&quot;Done!&quot;)
+wait(1.5.seconds)
+move(&quot;librarian3&quot;)
+look(&quot;right&quot;)
+say(&quot;Too bad, more work to be done here!&quot;)
+wait(4.0.seconds)
+move(&quot;librarian2&quot;)
+move(&quot;librarian&quot;)
+look(&quot;up&quot;)
+wait(8.0.seconds)
+
+}</property>
+   </properties>
+  </object>
+  <object id="24" name="librarian2" type="waypoint" x="800" y="128" width="32" height="32"/>
+  <object id="25" name="librarian3" type="waypoint" x="800" y="288" width="32" height="32"/>
  </objectgroup>
 </map>
