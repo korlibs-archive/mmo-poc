@@ -3,6 +3,7 @@ package mmo.server.script
 import com.soywiz.klock.*
 import com.soywiz.klogger.*
 import com.soywiz.korge.tiled.*
+import com.soywiz.korio.async.*
 import com.soywiz.korma.*
 import com.soywiz.korma.geom.*
 import kotlinx.coroutines.experimental.*
@@ -46,11 +47,11 @@ class Princess(val scene: ServerScene) : Npc() {
 
     val leversInPosition get() = expectedLeversDirection == actualLeversDirection
 
-    val posList = (1..4).map { map.getObjectPosByName("princess$it") ?: Point(0, 0) }
-    val pos1 = posList[0]
-    val pos2 = posList[1]
-    val pos3 = posList[2]
-    val pos4 = posList[3]
+    val posList = listOf(Point(0, 0)) + (1..4).map { map.getObjectPosByName("princess$it") ?: Point(0, 0) }
+    val pos1 = posList[1]
+    val pos2 = posList[2]
+    val pos3 = posList[3]
+    val pos4 = posList[4]
 
     init {
         logger.trace { "Princess($pos1, $pos2, $pos3, $pos4)" }
@@ -68,6 +69,7 @@ class Princess(val scene: ServerScene) : Npc() {
         while (true) {
             moveTo(pos4)
             moveTo(pos1)
+            lookAt(CharDirection.DOWN)
             wait(1.5.seconds)
             moveTo(pos2)
             val people = container?.users?.size ?: 0
@@ -97,8 +99,8 @@ class Princess(val scene: ServerScene) : Npc() {
         lookAt(user)
         conversationWith(user) {
             mood("happy")
-            say("Hello!")
-            options<Unit>("What do you want?") {
+            //say("Hello!")
+            options<Unit>("Hello! What do you want?") {
                 option("Where am I?") {
                     say("You are in a proof of concept of a MMO fully written in kotlin!")
                     say("I am written using Kotlin coroutines inside [Ktor](https://ktor.io/).")
@@ -143,6 +145,15 @@ class Princess(val scene: ServerScene) : Npc() {
                     }
                 }
 
+                option("Reset my account") {
+                    user.bag.clear()
+                    user.flags.clear()
+                    user.addItems("gold", 0) // Required so the key exists!
+                    user.sendInitialInfo()
+                    scene.sendEntityAppear(user)
+                    close()
+                }
+
                 option("Nothing, I'm ok!") {
                     close()
                 }
@@ -150,8 +161,16 @@ class Princess(val scene: ServerScene) : Npc() {
         }
     }
 
+    val questUpdateQueue = AsyncQueue()
     fun User.updateQuest() {
-        send(QuestUpdate(this@Princess.id, getQuestStatus(this)))
+        //questUpdateQueue(scene.coroutineContext) {
+        questUpdateQueue(DefaultDispatcher) {
+            try {
+                send(QuestUpdate(this@Princess.id, getQuestStatus(this@updateQuest)))
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            }
+        }
     }
 
     override fun onUserAppeared(user: User) {
@@ -162,7 +181,7 @@ class Princess(val scene: ServerScene) : Npc() {
         for (user in scene.users) user.updateQuest()
     }
 
-    fun getQuestStatus(user: User): QuestStatus {
+    suspend fun getQuestStatus(user: User): QuestStatus {
         val completedLevers = user.getFlag("princess-levers")
         val questStarted = user.getFlag("lever-puzzle-requested")
 

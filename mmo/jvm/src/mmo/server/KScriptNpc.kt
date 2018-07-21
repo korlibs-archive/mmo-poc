@@ -32,7 +32,7 @@ class KScriptNpc(val ktsEngine: KotlinJsr223JvmLocalScriptEngine, val scene: Ser
                 import com.soywiz.klock.*
                 import kotlinx.coroutines.experimental.*
                 launch {
-                    (bindings["npc"] as mmo.server.KScriptNpc).apply {
+                    (bindings["npc"] as ${KScriptNpc::class.qualifiedName}).apply {
                         $script
                     }
                 }

@@ -6,20 +6,26 @@ import com.soywiz.korio.file.std.*
 import com.soywiz.korio.i18n.Language
 import io.ktor.application.*
 import io.ktor.content.*
+import io.ktor.experimental.client.redis.*
 import io.ktor.features.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.sessions.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.*
 import mmo.protocol.*
 import mmo.server.script.*
+import mmo.server.storage.*
+import mmo.server.util.*
 import mmo.shared.*
 import org.jetbrains.kotlin.script.jsr223.*
 import java.io.*
+import java.io.IOException
+import java.util.*
 import javax.script.*
 import kotlin.coroutines.experimental.*
 import kotlin.reflect.*
@@ -35,6 +41,8 @@ object Experiments {
 
 val gameContext = newSingleThreadContext("MySingleThread")
 
+class MySession(val uuid: String)
+
 fun main(args: Array<String>) = Korio {
     val webFolder =
         listOf(".", "..", "../..", "../../..").map { File(it).absoluteFile["web"] }.firstOrNull { it.exists() }
@@ -45,21 +53,36 @@ fun main(args: Array<String>) = Korio {
 
     val tilemap = webVfs["library1.tmx"].readTiledMapData()
     println("Post TileMap")
-    val mainScene = ServerScene("lobby", tilemap)
+    val mainScene = ServerScene("lobby", tilemap, gameContext)
 
     println("Building Princess NPC")
     Princess(mainScene).apply { start() }
 
     val ktsEngine = ScriptEngineManager().getEngineByExtension("kts") as KotlinJsr223JvmLocalScriptEngine
 
-    val scriptedNpcs = tilemap.objectLayers.flatMap { it.objects }.filter { it.info.type == "npc" && "script" in it.objprops }
+    val scriptedNpcs =
+        tilemap.objectLayers.flatMap { it.objects }.filter { it.info.type == "npc" && "script" in it.objprops }
     for (scriptedNpc in scriptedNpcs) {
         KScriptNpc(ktsEngine, mainScene, scriptedNpc.name).apply { start() }
     }
 
+    val storage: Storage = try {
+        RedisStorage(RedisClient(), prefix = "mmo-")
+        //InmemoryStorage()
+    } catch (e: IOException) {
+        e.printStackTrace()
+        println("Couldn't use REDIS storage")
+        InmemoryStorage()
+    }
+
+    println("Storage: $storage")
+
     val server = embeddedServer(Netty, port = 8080) {
         install(WebSockets)
         install(ConditionalHeaders)
+        install(Sessions) {
+            cookie<MySession>("MMO_SESSION")
+        }
 
         //tilemapLog.level = Logger.Level.TRACE
         //Logger.defaultLevel = Logger.Level.TRACE
@@ -71,7 +94,15 @@ fun main(args: Array<String>) = Korio {
 
         routing {
             static("/") {
+                get {
+                    val userUid = call.getUserId()
+                    call.respondFile(webVfs["index.html"])
+                    finish()
+                }
+
                 webSocket {
+                    val userUid = call.getUserId()
+
                     launch(gameContext) {
                         //println(Thread.currentThread())
                         delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
@@ -82,7 +113,7 @@ fun main(args: Array<String>) = Korio {
                                 //println("OFFERING: $packet")
                                 sendQueue.offer(packet)
                             }
-                        }).apply {
+                        }, userUid, storage).apply {
                             this.skinBody = Skins.Body.chubby
                             this.skinArmor = Skins.Armor.armor1
                             this.skinHead = Skins.Head.elf1
@@ -90,11 +121,13 @@ fun main(args: Array<String>) = Korio {
                             this.setPositionTo(4, 4)
                         }
 
-                        websocketWriteProcess(coroutineContext, this@webSocket, user, sendQueue)
+                        websocketWriteProcess(gameContext, this@webSocket, user, sendQueue)
 
                         try {
                             mainScene.addUser(user)
                             user.send(UserSetId(user.id))
+                            user.sendInitialInfo()
+                            user.userAppeared()
                             websocketReadProcess(user)
                         } finally {
                             mainScene.remove(user)
@@ -102,7 +135,6 @@ fun main(args: Array<String>) = Korio {
                     }.join()
                 }
 
-                default(File(webFolder, "index.html"))
                 files(webFolder)
             }
         }
@@ -112,7 +144,14 @@ fun main(args: Array<String>) = Korio {
         println("Post runBlocking")
     }
     println("Pre Server Start")
-    server.start(wait = true)
+    server.start()
+}
+
+fun ApplicationCall.getUserId(): String {
+    val session = sessions.get<MySession>()
+    val userUuid = session?.uuid ?: UUID.randomUUID().toString()
+    sessions.set(MySession(userUuid))
+    return userUuid
 }
 
 fun websocketWriteProcess(

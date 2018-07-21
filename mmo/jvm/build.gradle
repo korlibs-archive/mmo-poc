@@ -29,6 +29,8 @@ dependencies {
     compile "io.ktor:ktor-client-apache:$ktor_version"
     compile "io.ktor:ktor-jackson:$ktor_version"
 
+    compile "io.ktor.client:ktor-client-redis:$ktor_client_redis_version"
+
     compile "ch.qos.logback:logback-classic:$logback_version"
 }
 
