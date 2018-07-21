@@ -73,7 +73,9 @@ fun main(args: Array<String>) = Korio {
     println("Redis Host: $redisHost")
 
     val storage: Storage = try {
-        RedisStorage(RedisClient(InetSocketAddress(redisHost, 6379)), prefix = "mmo-")
+        val redis = RedisClient(InetSocketAddress(redisHost, 6379))
+        redis.set("mmo", "running")
+        RedisStorage(redis, prefix = "mmo-")
         //InmemoryStorage()
     } catch (e: IOException) {
         e.printStackTrace()
