@@ -25,6 +25,7 @@ import mmo.shared.*
 import org.jetbrains.kotlin.script.jsr223.*
 import java.io.*
 import java.io.IOException
+import java.net.*
 import java.util.*
 import javax.script.*
 import kotlin.coroutines.experimental.*
@@ -66,8 +67,13 @@ fun main(args: Array<String>) = Korio {
         KScriptNpc(ktsEngine, mainScene, scriptedNpc.name).apply { start() }
     }
 
+    val redisHost = System.getenv("REDIS_HOST") ?: "127.0.0.1"
+
+    println("Before Storage")
+    println("Redis Host: $redisHost")
+
     val storage: Storage = try {
-        RedisStorage(RedisClient(), prefix = "mmo-")
+        RedisStorage(RedisClient(InetSocketAddress(redisHost, 6379)), prefix = "mmo-")
         //InmemoryStorage()
     } catch (e: IOException) {
         e.printStackTrace()

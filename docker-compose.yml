@@ -16,6 +16,14 @@ services:
       VIRTUAL_PORT: 8080
       LETSENCRYPT_EMAIL: soywiz@gmail.com
       LETSENCRYPT_HOST: mmo.soywiz.com
+  redis:
+    #container_name: redis
+    image: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - $PWD/data/redis:/data
+    restart: always
 networks:
   reverse-proxy:
     external:
