@@ -9,6 +9,7 @@ import io.ktor.application.*
 import io.ktor.content.*
 import io.ktor.experimental.client.redis.*
 import io.ktor.features.*
+import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.response.*
@@ -145,9 +146,15 @@ fun main(args: Array<String>) = Korio {
 
         routing {
             get("/bundle.js") {
-                call.response.header("Content-Encoding", "gzip")
-                call.respondBytes(bundleBytesGzip) {
-                    versions += LastModifiedVersion(builtTime)
+                if (call.request.headers[HttpHeaders.AcceptEncoding]?.contains("gzip", ignoreCase = true) == true) {
+                    call.response.header("Content-Encoding", "gzip")
+                    call.respondBytes(bundleBytesGzip) {
+                        versions += LastModifiedVersion(builtTime)
+                    }
+                } else {
+                    call.respondBytes(bundleBytes) {
+                        versions += LastModifiedVersion(builtTime)
+                    }
                 }
                 finish() // @TODO: Move this to respondFile
             }
