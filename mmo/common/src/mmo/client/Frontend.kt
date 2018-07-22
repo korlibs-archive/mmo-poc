@@ -42,6 +42,7 @@ open class MmoModule : Module() {
     override val quality: LightQuality = LightQuality.PERFORMANCE
 
     override suspend fun init(injector: AsyncInjector) {
+        //Logger("korui-application").level = Logger.Level.TRACE
         injector
             .mapPrototype { MmoMainScene(get(), get(), get()) }
             .mapSingleton { ResourceManager(get(), get()) }
@@ -69,12 +70,18 @@ class CharacterSkin(val base: TileSet) {
 }
 
 // @TODO: Resource unloading, LCU and stuff
-class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) {
+class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) : AsyncDependency {
     private val queue = AsyncThread()
     private val skins = LinkedHashMap<String, CharacterSkin>()
     private val bitmaps = LinkedHashMap<String, Bitmap32>()
     private val textures = LinkedHashMap<String, Texture>()
     val emptySkin = CharacterSkin(TileSet(views, listOf(views.transparentTexture), 1, 1))
+
+    lateinit var bubbleChat: NinePatchTex
+
+    override suspend fun init() {
+        bubbleChat = NinePatchTex(views, resourcesRoot["bubble-chat.9.png"].readNinePatch(defaultImageFormats))
+    }
 
     suspend fun getBitmap(file: String): Bitmap32 {
         return bitmaps.getOrPut(file) {
@@ -111,7 +118,7 @@ interface ClientListener {
 }
 
 class ClientEntity(
-    val rm: ResourceManager,
+    val resourceManager: ResourceManager,
     val coroutineContext: CoroutineContext,
     val id: Long,
     val views: Views,
@@ -138,7 +145,15 @@ class ClientEntity(
         anchorY = 2.3
         anchorX = 0.5
     }
-    val text = views.text("", textSize = 8.0)
+    val bubbleChatBg = views.ninePatchEx(resourceManager.bubbleChat, width = 64.0, height = 64.0).disableMouse().alpha(0.75)
+    val bubbleChatText = views.text("", textSize = 8.0).apply {
+        format = format.copy(color = Colors.BLACK)
+    }
+    val bubbleChat = views.container().apply {
+        this += bubbleChatBg
+        this += bubbleChatText
+        visible = false
+    }
     val rview = views.container().apply {
         name = "entity$id"
         addChild(imageBody)
@@ -150,19 +165,19 @@ class ClientEntity(
     val view = views.container().apply {
         name = "entity$id"
         addChild(rview)
-        addChild(text)
+        addChild(bubbleChat)
     }
-    var skinBody: CharacterSkin = rm.emptySkin
-    var skinArmor: CharacterSkin = rm.emptySkin
-    var skinHead: CharacterSkin = rm.emptySkin
-    var skinHair: CharacterSkin = rm.emptySkin
+    var skinBody: CharacterSkin = resourceManager.emptySkin
+    var skinArmor: CharacterSkin = resourceManager.emptySkin
+    var skinHead: CharacterSkin = resourceManager.emptySkin
+    var skinHair: CharacterSkin = resourceManager.emptySkin
 
     fun setSkin(body: Skins.Body, armor: Skins.Armor, head: Skins.Head, hair: Skins.Hair) {
         launch(coroutineContext, start = CoroutineStart.UNDISPATCHED) {
-            imageBody.tex = rm.getSkin(Skins.Body.prefix, body.fileName).apply { skinBody = this }[direction.id, 0]
-            imageArmor.tex = rm.getSkin(Skins.Armor.prefix, armor.fileName).apply { skinArmor = this }[direction.id, 0]
-            imageHead.tex = rm.getSkin(Skins.Head.prefix, head.fileName).apply { skinHead = this }[direction.id, 0]
-            imageHair.tex = rm.getSkin(Skins.Hair.prefix, hair.fileName).apply { skinHair = this }[direction.id, 0]
+            imageBody.tex = resourceManager.getSkin(Skins.Body.prefix, body.fileName).apply { skinBody = this }[direction.id, 0]
+            imageArmor.tex = resourceManager.getSkin(Skins.Armor.prefix, armor.fileName).apply { skinArmor = this }[direction.id, 0]
+            imageHead.tex = resourceManager.getSkin(Skins.Head.prefix, head.fileName).apply { skinHead = this }[direction.id, 0]
+            imageHair.tex = resourceManager.getSkin(Skins.Hair.prefix, hair.fileName).apply { skinHair = this }[direction.id, 0]
         }
     }
 
@@ -219,21 +234,32 @@ class ClientEntity(
     var sayPromise: Deferred<Unit>? = null
     fun say(text: String) {
         sayPromise?.cancel()
-        this.text.text = text
+        this.bubbleChatText.text = text
+        // @TODO: Do not hardcode constants here, let's get from 9-patch content info
+        bubbleChatBg.width = this.bubbleChatText.width + 16
+        bubbleChatBg.height = this.bubbleChatText.height * 2 + 16
+        //println("bubbleChatBg.localMatrix=${bubbleChatBg.localMatrix}")
+        bubbleChat.visible = true
+        bubbleChatText.x = 8.0
+        bubbleChatText.y = 8.0
+        bubbleChat.y = -bubbleChatBg.height - imageBody.height + 32
+        bubbleChat.x -imageBody.width / 2 - 24.0
         sayPromise = async(coroutineContext) {
             delay(2000)
-            this@ClientEntity.text.text = ""
+            this@ClientEntity.bubbleChatText.text = ""
+            bubbleChat.visible = false
         }
     }
 
     fun setQuestSatus(status: QuestStatus) {
+        //views.ninePatch()
         println("QuestStatus = $status")
         launch(coroutineContext, start = CoroutineStart.UNDISPATCHED) {
             quest.tex = when (status) {
-                QuestStatus.NONE -> rm.getTexture("")
-                QuestStatus.NEW -> rm.getTexture("quest-availiable.png")
-                QuestStatus.UNCOMPLETE -> rm.getTexture("quest.png")
-                QuestStatus.COMPLETE -> rm.getTexture("quest-ready.png")
+                QuestStatus.NONE -> resourceManager.getTexture("")
+                QuestStatus.NEW -> resourceManager.getTexture("quest-availiable.png")
+                QuestStatus.UNCOMPLETE -> resourceManager.getTexture("quest.png")
+                QuestStatus.COMPLETE -> resourceManager.getTexture("quest-ready.png")
             }
         }
     }
@@ -270,7 +296,7 @@ class ClientNpcConversation(
 fun tilePosToSpriteCoords(x: Double, y: Double): Point2d = Point2d(x * 32.0 + 16.0, y * 32.0 + 16.0)
 
 class MmoMainScene(
-    val rm: ResourceManager,
+    val resourceManager: ResourceManager,
     val browser: Browser,
     val module: Module
 ) : Scene(), ClientListener {
@@ -315,7 +341,7 @@ class MmoMainScene(
 
     fun getOrCreateEntityById(id: Long): ClientEntity {
         return entitiesById.getOrPut(id) {
-            ClientEntity(rm, coroutineContext, id, views, this@MmoMainScene).apply {
+            ClientEntity(resourceManager, coroutineContext, id, views, this@MmoMainScene).apply {
                 rview.onClick {
                     ws?.sendPacket(ClientRequestInteract(id))
                 }
@@ -504,6 +530,9 @@ class MmoMainScene(
         bagUpdated()
     }
 }
+
+inline fun <T : View> T.disableMouse(): T = this.apply { mouseEnabled = false }
+inline fun <T : View> T.alpha(value: Number): T = this.apply { alpha = value.toDouble() }
 
 fun Views.simpleButton(width: Int, height: Int, title: String, click: suspend () -> Unit): Container {
     val out = container().apply {
