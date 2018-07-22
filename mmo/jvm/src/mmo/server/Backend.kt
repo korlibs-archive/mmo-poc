@@ -4,13 +4,15 @@ import com.soywiz.korge.tiled.*
 import com.soywiz.korio.*
 import com.soywiz.korio.file.std.*
 import com.soywiz.korio.i18n.Language
-import com.soywiz.korio.ktor.*
+import com.soywiz.korio.lang.*
 import io.ktor.application.*
 import io.ktor.content.*
 import io.ktor.experimental.client.redis.*
 import io.ktor.features.*
+import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.http.cio.websocket.Frame
+import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -21,15 +23,18 @@ import kotlinx.coroutines.experimental.channels.*
 import mmo.protocol.*
 import mmo.server.script.*
 import mmo.server.storage.*
+import mmo.server.util.*
 import mmo.shared.*
 import org.jetbrains.kotlin.script.jsr223.*
 import java.io.*
 import java.io.IOException
 import java.net.*
 import java.util.*
+import java.util.zip.*
 import javax.script.*
 import kotlin.coroutines.experimental.*
 import kotlin.reflect.*
+
 
 object Experiments {
     @JvmStatic
@@ -49,6 +54,7 @@ fun main(args: Array<String>) = Korio {
         listOf(".", "..", "../..", "../../..").map { File(it).absoluteFile["web"] }.firstOrNull { it.exists() }
                 ?: error("Can't find 'web' folder")
     val webVfs = webFolder.toVfs()
+    val distVfs = webFolder["../dist"].toVfs()
 
     println("webFolder:$webFolder")
 
@@ -85,6 +91,35 @@ fun main(args: Array<String>) = Korio {
 
     println("Storage: $storage")
 
+    println("Packing app...")
+    val bundleBytes = try {
+        webVfs["game.js"].miniWebpack().toByteArray()
+    } catch (e: Throwable) {
+        null
+    }
+    println("Compression packed app...")
+
+    /*
+    val bundleBytes = try {
+        distVfs["bundle.js"].readAll()
+    } catch (e: Throwable) {
+        null
+    }
+    */
+
+    val bundleBytesGzip = bundleBytes?.gzipCompress()
+
+    val indexHtmlString = webVfs["index.html"].readString()
+    val patchedIndexHtmlString = indexHtmlString.replace(
+        "<script data-main=\"game\" src=\"require.min.js\" type=\"text/javascript\"></script>",
+        "<script src=\"bundle.js\" type=\"text/javascript\"></script>"
+    )
+
+    val indexHtmlBytes = indexHtmlString.toByteArray(UTF8)
+    val patchedIndexHtmlBytes = patchedIndexHtmlString.toByteArray(UTF8)
+
+    println("Game assets ready")
+
     val server = embeddedServer(Netty, port = 8080) {
         install(WebSockets)
         install(ConditionalHeaders)
@@ -101,48 +136,58 @@ fun main(args: Array<String>) = Korio {
         println("Pre Routing")
 
         routing {
+            get("/bundle.js") {
+                if (bundleBytesGzip != null) {
+                    call.response.header("Content-Encoding", "gzip")
+                    call.respondBytes(bundleBytesGzip, ContentType.Application.Json)
+                } else {
+                    call.respondBytes(byteArrayOf())
+                }
+            }
+            get("/") {
+                val userUid = call.getUserId()
+                call.respondBytes(
+                    if (bundleBytesGzip != null) patchedIndexHtmlBytes else indexHtmlBytes,
+                    ContentType.Text.Html
+                )
+                finish()
+            }
+            webSocket("/") {
+                val userUid = call.getUserId()
+
+                launch(gameContext) {
+                    //println(Thread.currentThread())
+                    delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
+                    val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
+
+                    val user = User(object : PacketSendChannel {
+                        override fun send(packet: ServerPacket) {
+                            //println("OFFERING: $packet")
+                            sendQueue.offer(packet)
+                        }
+                    }, userUid, storage).apply {
+                        this.skinBody = Skins.Body.chubby
+                        this.skinArmor = Skins.Armor.armor1
+                        this.skinHead = Skins.Head.elf1
+                        this.skinHair = Skins.Hair.pelo1
+                        this.setPositionTo(4, 4)
+                    }
+
+                    websocketWriteProcess(gameContext, this@webSocket, user, sendQueue)
+
+                    try {
+                        mainScene.addUser(user)
+                        user.send(UserSetId(user.id))
+                        user.sendInitialInfo()
+                        user.userAppeared()
+                        websocketReadProcess(user)
+                    } finally {
+                        mainScene.remove(user)
+                    }
+                }.join()
+            }
+
             static("/") {
-                get {
-                    val userUid = call.getUserId()
-                    call.respondFile(webVfs["index.html"])
-                    finish()
-                }
-
-                webSocket {
-                    val userUid = call.getUserId()
-
-                    launch(gameContext) {
-                        //println(Thread.currentThread())
-                        delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
-                        val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
-
-                        val user = User(object : PacketSendChannel {
-                            override fun send(packet: ServerPacket) {
-                                //println("OFFERING: $packet")
-                                sendQueue.offer(packet)
-                            }
-                        }, userUid, storage).apply {
-                            this.skinBody = Skins.Body.chubby
-                            this.skinArmor = Skins.Armor.armor1
-                            this.skinHead = Skins.Head.elf1
-                            this.skinHair = Skins.Hair.pelo1
-                            this.setPositionTo(4, 4)
-                        }
-
-                        websocketWriteProcess(gameContext, this@webSocket, user, sendQueue)
-
-                        try {
-                            mainScene.addUser(user)
-                            user.send(UserSetId(user.id))
-                            user.sendInitialInfo()
-                            user.userAppeared()
-                            websocketReadProcess(user)
-                        } finally {
-                            mainScene.remove(user)
-                        }
-                    }.join()
-                }
-
                 files(webFolder)
             }
         }
@@ -239,3 +284,13 @@ suspend fun <T : BasePacket> SendChannel<Frame>.sendPacket(packet: T, clazz: KCl
 //suspend inline fun <reified T : BasePacket> SendChannel<Frame>.sendPacket(packet: T) {
 //    send(Frame.Text(serializePacket(packet, T::class)))
 //}
+
+fun ByteArray.gzipCompress(level: Int = 9): ByteArray = ByteArrayOutputStream(this.size).apply {
+    MyGZIPOutputStream(this, level).use { zipStream -> zipStream.write(this@gzipCompress) }
+}.toByteArray()
+
+internal class MyGZIPOutputStream(out: OutputStream, level: Int) : GZIPOutputStream(out) {
+    init {
+        def.setLevel(level)
+    }
+}
