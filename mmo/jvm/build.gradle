@@ -31,6 +31,8 @@ dependencies {
 
     compile "io.ktor.client:ktor-client-redis:$ktor_client_redis_version"
 
+    compile "com.soywiz:korio-ktor-ext-jvm:$korgeVersion"
+
     compile "ch.qos.logback:logback-classic:$logback_version"
 }
 
