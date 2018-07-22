@@ -9,7 +9,6 @@ import io.ktor.application.*
 import io.ktor.content.*
 import io.ktor.experimental.client.redis.*
 import io.ktor.features.*
-import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.response.*
@@ -95,7 +94,7 @@ fun main(args: Array<String>) = Korio {
     val bundleBytes = try {
         webVfs["game.js"].miniWebpack().toByteArray()
     } catch (e: Throwable) {
-        null
+        byteArrayOf()
     }
     println("Compression packed app...")
 
@@ -118,6 +117,15 @@ fun main(args: Array<String>) = Korio {
     val indexHtmlBytes = indexHtmlString.toByteArray(UTF8)
     val patchedIndexHtmlBytes = patchedIndexHtmlString.toByteArray(UTF8)
 
+    val patchedFiles = MemoryVfsMix(
+        "index.html" to indexHtmlBytes,
+        "index.patched.html" to patchedIndexHtmlBytes,
+        "bundle.js" to bundleBytes,
+        "bundle.js.gz.js" to bundleBytesGzip
+    )
+
+    val builtTime = Date()
+
     println("Game assets ready")
 
     val server = embeddedServer(Netty, port = 8080) {
@@ -137,20 +145,18 @@ fun main(args: Array<String>) = Korio {
 
         routing {
             get("/bundle.js") {
-                if (bundleBytesGzip != null) {
-                    call.response.header("Content-Encoding", "gzip")
-                    call.respondBytes(bundleBytesGzip, ContentType.Application.Json)
-                } else {
-                    call.respondBytes(byteArrayOf())
+                call.response.header("Content-Encoding", "gzip")
+                call.respondBytes(bundleBytesGzip) {
+                    versions += LastModifiedVersion(builtTime)
                 }
+                finish() // @TODO: Move this to respondFile
             }
             get("/") {
                 val userUid = call.getUserId()
-                call.respondBytes(
-                    if (bundleBytesGzip != null) patchedIndexHtmlBytes else indexHtmlBytes,
-                    ContentType.Text.Html
-                )
-                finish()
+                call.respondBytes(patchedIndexHtmlBytes) {
+                    versions += LastModifiedVersion(builtTime)
+                }
+                finish() // @TODO: Move this to respondFile
             }
             webSocket("/") {
                 val userUid = call.getUserId()
