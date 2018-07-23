@@ -76,10 +76,10 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) : Asyn
     private val bmpSlices = LinkedHashMap<String, BitmapSlice<Bitmap>>()
     val emptySkin = CharacterSkin(TileSet(listOf(Bitmaps.transparent), 1, 1))
 
-    lateinit var bubbleChat: NinePatchTex
+    lateinit var bubbleChat: NinePatchBitmap32
 
     override suspend fun init() {
-        bubbleChat = NinePatchTex(resourcesRoot["bubble-chat.9.png"].readNinePatch(defaultImageFormats))
+        bubbleChat = resourcesRoot["bubble-chat.9.png"].readNinePatch(defaultImageFormats)
     }
 
     suspend fun getBitmap(file: String): Bitmap32 {
@@ -124,23 +124,23 @@ class ClientEntity(
     val listener: ClientListener
 ) {
     // @TODO: Remove code duplication related to layers
-    val imageBody = views.image(Bitmaps.transparent).apply {
+    val imageBody = Image(Bitmaps.transparent).apply {
         anchorX = 0.5
         anchorY = 1.0
     }
-    val imageArmor = views.image(Bitmaps.transparent).apply {
+    val imageArmor = Image(Bitmaps.transparent).apply {
         anchorX = 0.5
         anchorY = 1.0
     }
-    val imageHead = views.image(Bitmaps.transparent).apply {
+    val imageHead = Image(Bitmaps.transparent).apply {
         anchorX = 0.5
         anchorY = 1.0
     }
-    val imageHair = views.image(Bitmaps.transparent).apply {
+    val imageHair = Image(Bitmaps.transparent).apply {
         anchorX = 0.5
         anchorY = 1.0
     }
-    val quest = views.image(Bitmaps.transparent).apply {
+    val quest = Image(Bitmaps.transparent).apply {
         anchorY = 2.3
         anchorX = 0.5
     }
