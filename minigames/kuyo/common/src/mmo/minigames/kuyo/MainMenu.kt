@@ -1,27 +1,29 @@
 package mmo.minigames.kuyo
 
 /*
+import com.soywiz.korge.bitmapfont.*
 import com.soywiz.korge.scene.*
+import com.soywiz.korge.view.*
 import kotlin.coroutines.experimental.*
 
 class MainMenuScene : Scene() {
     val queue = JobQueue()
 
-    override suspend fun init() {
-        val font = readBitmapFont("font1.fnt")
-        val endless = Text(font, "ENDLESS", 96).apply {
+    override suspend fun Container.sceneInit() {
+        val font = resourcesRoot["font1.fnt"].readBitmapFont()
+        val endless = Text("ENDLESS", 96.0, font = font).apply {
             position(448, 64 + 128 * 0)
-            anchor(0.5, 0.5)
+            //anchor(0.5, 0.5)
             //elasticButton(queue)
         }
         val localCoOp = Text(font, "LOCAL CO-OP", 96).apply {
             position(448, 64 + 128 * 1)
-            anchor(0.5, 0.5)
+            //anchor(0.5, 0.5)
             //elasticButton(queue)
         }
         val credits = Text(font, "CREDITS", 96).apply {
             position(448, 64 + 128 * 2)
-            anchor(0.5, 0.5)
+            //anchor(0.5, 0.5)
             //elasticButton(queue)
         }
         this.root += endless
@@ -42,7 +44,7 @@ class MainMenuScene : Scene() {
     }
 }
 
-suspend fun optionSelector(events: ViewContainer, options: List<Pair<View, String>>) = suspendCoroutine<String> { c ->
+suspend fun optionSelector(events: Container, options: List<Pair<View, String>>) = suspendCoroutine<String> { c ->
     val queue: JobQueue = JobQueue()
     var index = 0
 

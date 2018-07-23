@@ -493,7 +493,8 @@ class MmoMainScene(
     lateinit var moneyText: Text
     var latencyText: Text? = null
 
-    override suspend fun sceneInit(sceneView: Container) {
+    override suspend fun Container.sceneInit() {
+        val sceneView = this
         init()
         entityContainer.onClick {
             val pos = it.currentPos

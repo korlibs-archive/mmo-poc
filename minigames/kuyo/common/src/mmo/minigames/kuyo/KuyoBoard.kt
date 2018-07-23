@@ -5,7 +5,7 @@ import com.soywiz.korma.*
 import com.soywiz.korma.geom.*
 import mmo.minigames.kuyo.KuyoBoard.Companion.EMPTY
 
-data class KuyoItem(val pos: Point, val color: Int)
+data class KuyoItem(val pos: PointInt, val color: Int)
 
 interface KuyoShape {
     val items: List<KuyoItem>
@@ -14,23 +14,23 @@ interface KuyoShape {
 }
 
 data class KuyoShape2(val k1: KuyoItem, val k2: KuyoItem) : KuyoShape {
-    constructor(c1: Int, c2: Int) : this(KuyoItem(Point(0, 0), c1), KuyoItem(Point(0, -1), c2))
+    constructor(c1: Int, c2: Int) : this(KuyoItem(PointInt(0, 0), c1), KuyoItem(PointInt(0, -1), c2))
 
     override val items = listOf(k1, k2)
     override fun rotatedRight(): KuyoShape2 {
         return when (k2.pos) {
-            Point(0, 1) -> KuyoShape2(k1, k2.copy(pos = Point(-1, 0)))
-            Point(-1, 0) -> KuyoShape2(k1, k2.copy(pos = Point(0, -1)))
-            Point(0, -1) -> KuyoShape2(k1, k2.copy(pos = Point(+1, 0)))
-            Point(+1, 0) -> KuyoShape2(k1, k2.copy(pos = Point(0, +1)))
+            Point(0, 1) -> KuyoShape2(k1, k2.copy(pos = PointInt(-1, 0)))
+            Point(-1, 0) -> KuyoShape2(k1, k2.copy(pos = PointInt(0, -1)))
+            Point(0, -1) -> KuyoShape2(k1, k2.copy(pos = PointInt(+1, 0)))
+            Point(+1, 0) -> KuyoShape2(k1, k2.copy(pos = PointInt(0, +1)))
             else -> TODO()
         }
     }
 }
 
-data class KuyoDrop(val pos: Point, val shape: KuyoShape) {
+data class KuyoDrop(val pos: PointInt, val shape: KuyoShape) {
     val transformedItems get() = shape.items.map { it.copy(pos = pos + it.pos) }
-    fun displaced(delta: Point): KuyoDrop = copy(pos = pos + delta)
+    fun displaced(delta: PointInt): KuyoDrop = copy(pos = pos + delta)
     fun rotated(direction: Int): KuyoDrop = if (direction < 0) rotatedLeft() else rotatedRight()
     fun rotatedLeft(): KuyoDrop = copy(shape = shape.rotatedLeft())
     fun rotatedRight(): KuyoDrop = copy(shape = shape.rotatedRight())
@@ -48,8 +48,8 @@ data class KuyoBoard(val board: Array2<Int> = Array2(6, 12) { 0 }) {
         if ((x !in 0 until width) || (y !in 0 until height)) return BORDER
         return board.tryGet(x, y) ?: EMPTY
     }
-    operator fun get(pos: Point): Int = get(pos.x.toInt(), pos.y.toInt())
-    operator fun set(pos: Point, value: Int) = run { board.trySet(pos, value) }
+    operator fun get(pos: PointInt): Int = get(pos.x, pos.y)
+    operator fun set(pos: PointInt, value: Int) = run { board.trySet(pos, value) }
     fun clone() = KuyoBoard(board.clone())
 }
 
@@ -59,20 +59,20 @@ data class KuyoStep<TKuyoTransform : KuyoTransform>(
     val transforms: List<TKuyoTransform>
 )
 
-data class ColoredPoint(val pos: Point, val color: Int)
+data class ColoredPoint(val pos: PointInt, val color: Int)
 
 interface KuyoTransform {
-    data class Move(val src: Point, val dst: Point, val color: Int) : KuyoTransform {
+    data class Move(val src: PointInt, val dst: PointInt, val color: Int) : KuyoTransform {
         val csrc = ColoredPoint(src, color)
         val cdst = ColoredPoint(dst, color)
     }
 
     data class Swap(val src: ColoredPoint, val dst: ColoredPoint) : KuyoTransform
-    data class Explode(val items: List<Point>) : KuyoTransform
+    data class Explode(val items: List<PointInt>) : KuyoTransform
     data class Place(val item: KuyoItem) : KuyoTransform
 }
 
-fun KuyoBoard.swap(p1: Point, p2: Point): KuyoStep<KuyoTransform.Swap> {
+fun KuyoBoard.swap(p1: PointInt, p2: PointInt): KuyoStep<KuyoTransform.Swap> {
     return kuyoStep { dst, transforms ->
         val c1 = dst[p1]
         val c2 = dst[p2]
@@ -96,14 +96,14 @@ fun KuyoBoard.gravity(): KuyoStep<KuyoTransform.Move> {
     val transforms = arrayListOf<KuyoTransform.Move>()
     for (x in 0 until width) {
         for (y in height - 1 downTo 0) {
-            val posSrc = Point(x, y)
+            val posSrc = PointInt(x, y)
             val color = dst[posSrc]
             // We have a chip here
             if (color != EMPTY) {
                 // Try moving down as much as possible
                 for (y2 in 1 until height + 1 - y) {
-                    val posDst = Point(x, y + y2)
-                    val posDstPrev = Point(x, y + y2 - 1)
+                    val posDst = PointInt(x, y + y2)
+                    val posDstPrev = PointInt(x, y + y2 - 1)
                     val c = dst[posDst]
                     if (c != EMPTY) {
                         if (posSrc != posDstPrev) {
@@ -124,14 +124,14 @@ fun KuyoBoard.explode(): KuyoStep<KuyoTransform.Explode> {
     val src = this
     val dst = this.clone()
     val transforms = arrayListOf<KuyoTransform.Explode>()
-    val explored = hashSetOf<Point>()
+    val explored = hashSetOf<PointInt>()
 
-    fun explore(p: Point): List<Point> {
+    fun explore(p: PointInt): List<PointInt> {
         if (p in explored) return listOf()
         explored += p
         val color = dst[p]
 
-        val deltas = listOf(Point(-1, 0), Point(+1, 0), Point(0, -1), Point(0, +1))
+        val deltas = listOf(PointInt(-1, 0), PointInt(+1, 0), PointInt(0, -1), PointInt(0, +1))
         val nexts = deltas.map { p + it }
 
         return listOf(p) + nexts.filter { dst[it] == color }.flatMap { explore(it) }
@@ -139,7 +139,7 @@ fun KuyoBoard.explode(): KuyoStep<KuyoTransform.Explode> {
 
     for (x in 0 until width) {
         for (y in 0 until height) {
-            val p = Point(x, y)
+            val p = PointInt(x, y)
             if (p !in explored && dst[p] != EMPTY) {
                 val items = explore(p)
                 if (items.size >= 4) {
@@ -179,13 +179,13 @@ fun KuyoBoard.place(drop: KuyoDrop): KuyoStep<KuyoTransform.Place> {
     return KuyoStep(src, dst, transforms)
 }
 
-fun KuyoDrop.tryMove(delta: Point, board: KuyoBoard): KuyoDrop? {
+fun KuyoDrop.tryMove(delta: PointInt, board: KuyoBoard): KuyoDrop? {
     val newDrop = this.displaced(delta)
     return if (board.canMove(newDrop)) newDrop else null
 }
 
 fun KuyoDrop.tryRotate(direction: Int, board: KuyoBoard): KuyoDrop? {
-    val deltas = listOf(Point(0, 0), Point(-1, 0), Point(+1, 0), Point(0, -1))
+    val deltas = listOf(PointInt(0, 0), PointInt(-1, 0), PointInt(+1, 0), PointInt(0, -1))
     for (delta in deltas) {
         val newDrop = this.displaced(delta).rotated(direction)
         if (board.canMove(newDrop)) return newDrop
@@ -193,7 +193,7 @@ fun KuyoDrop.tryRotate(direction: Int, board: KuyoBoard): KuyoDrop? {
     return null
 }
 
-fun KuyoDrop.moveOrHold(delta: Point, board: KuyoBoard): KuyoDrop = tryMove(delta, board) ?: this
+fun KuyoDrop.moveOrHold(delta: PointInt, board: KuyoBoard): KuyoDrop = tryMove(delta, board) ?: this
 fun KuyoDrop.rotateOrHold(direction: Int, board: KuyoBoard): KuyoDrop = tryRotate(direction, board) ?: this
 
 /////////////// UTILS
@@ -225,7 +225,7 @@ fun KuyoBoard.toBoardString(): String {
     for (y in 0 until height) {
         var line = ""
         for (x in 0 until width) {
-            val v = this[Point(x, y)]
+            val v = this[PointInt(x, y)]
             line += when (v) {
                 0 -> '.'
                 else -> '0' + v

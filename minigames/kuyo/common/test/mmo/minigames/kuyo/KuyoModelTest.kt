@@ -91,7 +91,7 @@ class KuyoModelTest {
 
     @Test
     fun place1() {
-        val drop = KuyoDrop(IPoint(0, 1), KuyoShape2(1, 2))
+        val drop = KuyoDrop(PointInt(0, 1), KuyoShape2(1, 2))
 
         boardShouldBe(
             board(
@@ -112,7 +112,7 @@ class KuyoModelTest {
 
     @Test
     fun place2() {
-        val drop = KuyoDrop(IPoint(0, 0), KuyoShape2(1, 2))
+        val drop = KuyoDrop(PointInt(0, 0), KuyoShape2(1, 2))
 
         boardShouldBe(
             board(
@@ -133,7 +133,7 @@ class KuyoModelTest {
 
     @Test
     fun place3() {
-        val drop = KuyoDrop(IPoint(0, 0), KuyoShape2(1, 2))
+        val drop = KuyoDrop(PointInt(0, 0), KuyoShape2(1, 2))
 
         boardShouldBe(
             board(
@@ -142,7 +142,7 @@ class KuyoModelTest {
                 "....",
                 "...."
             ),
-            { it.place(drop.moveOrHold(IPoint(0, +1), it)).dst },
+            { it.place(drop.moveOrHold(PointInt(0, +1), it)).dst },
             board(
                 "2...",
                 "1...",
@@ -161,7 +161,7 @@ class KuyoModelTest {
                 "....",
                 "...."
             ),
-            { it.place(KuyoDrop(IPoint(1, 1), KuyoShape2(1, 2))).dst },
+            { it.place(KuyoDrop(PointInt(1, 1), KuyoShape2(1, 2))).dst },
             board(
                 ".2..",
                 ".1..",
@@ -180,7 +180,7 @@ class KuyoModelTest {
                 "....",
                 "1234"
             ),
-            { it.swap(IPoint(1, 3), IPoint(2, 3)).dst },
+            { it.swap(PointInt(1, 3), PointInt(2, 3)).dst },
             board(
                 "....",
                 "....",
@@ -195,7 +195,7 @@ class KuyoModelTest {
                 "....",
                 "1234"
             ),
-            { it.swap(IPoint(1, 3), IPoint(2, 3)).transforms },
+            { it.swap(PointInt(1, 3), PointInt(2, 3)).transforms },
             "[Swap(src=ColoredPoint(pos=(1, 3), color=2), dst=ColoredPoint(pos=(2, 3), color=3))]"
         )
     }
