@@ -6,7 +6,6 @@ import com.soywiz.kmem.*
 import com.soywiz.korge.component.docking.*
 import com.soywiz.korge.html.*
 import com.soywiz.korge.input.*
-import com.soywiz.korge.render.*
 import com.soywiz.korge.resources.*
 import com.soywiz.korge.scene.*
 import com.soywiz.korge.service.*
@@ -62,7 +61,7 @@ class CharacterSkin(val base: TileSet) {
     val cellHeight = base.height / ROWS
     val items = (0 until ROWS).map { row ->
         (0 until COLS).map { column ->
-            base[row * 3 + column] ?: base.views.transparentTexture
+            base[row * 3 + column] ?: Bitmaps.transparent
         }
     }
 
@@ -74,13 +73,13 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) : Asyn
     private val queue = AsyncThread()
     private val skins = LinkedHashMap<String, CharacterSkin>()
     private val bitmaps = LinkedHashMap<String, Bitmap32>()
-    private val textures = LinkedHashMap<String, Texture>()
-    val emptySkin = CharacterSkin(TileSet(views, listOf(views.transparentTexture), 1, 1))
+    private val bmpSlices = LinkedHashMap<String, BitmapSlice<Bitmap>>()
+    val emptySkin = CharacterSkin(TileSet(listOf(Bitmaps.transparent), 1, 1))
 
     lateinit var bubbleChat: NinePatchTex
 
     override suspend fun init() {
-        bubbleChat = NinePatchTex(views, resourcesRoot["bubble-chat.9.png"].readNinePatch(defaultImageFormats))
+        bubbleChat = NinePatchTex(resourcesRoot["bubble-chat.9.png"].readNinePatch(defaultImageFormats))
     }
 
     suspend fun getBitmap(file: String): Bitmap32 {
@@ -97,9 +96,9 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) : Asyn
         }
     }
 
-    suspend fun getTexture(file: String): Texture {
-        return textures.getOrPut(file) {
-            views.texture(getBitmap(file))
+    suspend fun getBmpSlice(file: String): BmpSlice {
+        return bmpSlices.getOrPut(file) {
+            getBitmap(file).slice()
         }
     }
 
@@ -107,7 +106,7 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) : Asyn
         skins.getOrPut(skinName) {
             val bitmap = getBitmap(if (skinName == Skins.Body.none.fileName) "" else "chara/$prefix$skinName.png")
             val bitmaps = TileSet.extractBitmaps(bitmap, bitmap.width / 3, bitmap.height / 4, 3, 3 * 4)
-            val tileset = TileSet.fromBitmaps(views, bitmap.width / 3, bitmap.height / 4, bitmaps)
+            val tileset = TileSet.fromBitmaps(bitmap.width / 3, bitmap.height / 4, bitmaps)
             CharacterSkin(tileset)
         }
     }
@@ -125,36 +124,36 @@ class ClientEntity(
     val listener: ClientListener
 ) {
     // @TODO: Remove code duplication related to layers
-    val imageBody = views.image(views.transparentTexture).apply {
+    val imageBody = views.image(Bitmaps.transparent).apply {
         anchorX = 0.5
         anchorY = 1.0
     }
-    val imageArmor = views.image(views.transparentTexture).apply {
+    val imageArmor = views.image(Bitmaps.transparent).apply {
         anchorX = 0.5
         anchorY = 1.0
     }
-    val imageHead = views.image(views.transparentTexture).apply {
+    val imageHead = views.image(Bitmaps.transparent).apply {
         anchorX = 0.5
         anchorY = 1.0
     }
-    val imageHair = views.image(views.transparentTexture).apply {
+    val imageHair = views.image(Bitmaps.transparent).apply {
         anchorX = 0.5
         anchorY = 1.0
     }
-    val quest = views.image(views.transparentTexture).apply {
+    val quest = views.image(Bitmaps.transparent).apply {
         anchorY = 2.3
         anchorX = 0.5
     }
-    val bubbleChatBg = views.ninePatchEx(resourceManager.bubbleChat, width = 64.0, height = 64.0).disableMouse().alpha(0.75)
-    val bubbleChatText = views.text("", textSize = 8.0).apply {
+    val bubbleChatBg = NinePatchEx(resourceManager.bubbleChat, width = 64.0, height = 64.0).disableMouse().alpha(0.75)
+    val bubbleChatText = Text("", textSize = 8.0).apply {
         format = format.copy(color = Colors.BLACK)
     }
-    val bubbleChat = views.container().apply {
+    val bubbleChat = Container().apply {
         this += bubbleChatBg
         this += bubbleChatText
         visible = false
     }
-    val rview = views.container().apply {
+    val rview = Container().apply {
         name = "entity$id"
         addChild(imageBody)
         addChild(imageArmor)
@@ -162,7 +161,7 @@ class ClientEntity(
         addChild(imageHair)
         addChild(quest)
     }
-    val view = views.container().apply {
+    val view = Container().apply {
         name = "entity$id"
         addChild(rview)
         addChild(bubbleChat)
@@ -174,10 +173,10 @@ class ClientEntity(
 
     fun setSkin(body: Skins.Body, armor: Skins.Armor, head: Skins.Head, hair: Skins.Hair) {
         launch(coroutineContext, start = CoroutineStart.UNDISPATCHED) {
-            imageBody.tex = resourceManager.getSkin(Skins.Body.prefix, body.fileName).apply { skinBody = this }[direction.id, 0]
-            imageArmor.tex = resourceManager.getSkin(Skins.Armor.prefix, armor.fileName).apply { skinArmor = this }[direction.id, 0]
-            imageHead.tex = resourceManager.getSkin(Skins.Head.prefix, head.fileName).apply { skinHead = this }[direction.id, 0]
-            imageHair.tex = resourceManager.getSkin(Skins.Hair.prefix, hair.fileName).apply { skinHair = this }[direction.id, 0]
+            imageBody.bitmap = resourceManager.getSkin(Skins.Body.prefix, body.fileName).apply { skinBody = this }[direction.id, 0]
+            imageArmor.bitmap = resourceManager.getSkin(Skins.Armor.prefix, armor.fileName).apply { skinArmor = this }[direction.id, 0]
+            imageHead.bitmap = resourceManager.getSkin(Skins.Head.prefix, head.fileName).apply { skinHead = this }[direction.id, 0]
+            imageHair.bitmap = resourceManager.getSkin(Skins.Hair.prefix, hair.fileName).apply { skinHair = this }[direction.id, 0]
         }
     }
 
@@ -193,10 +192,10 @@ class ClientEntity(
     var direction = CharDirection.DOWN
 
     fun setSkinTex(dir: Int, frame: Int) {
-        imageBody.tex = skinBody[dir, frame]
-        imageArmor.tex = skinArmor[dir, frame]
-        imageHead.tex = skinHead[dir, frame]
-        imageHair.tex = skinHair[dir, frame]
+        imageBody.bitmap = skinBody[dir, frame]
+        imageArmor.bitmap = skinArmor[dir, frame]
+        imageHead.bitmap = skinHead[dir, frame]
+        imageHair.bitmap = skinHair[dir, frame]
     }
 
     fun move(src: Point2d, dst: Point2d, totalTime: TimeSpan) {
@@ -255,11 +254,11 @@ class ClientEntity(
         //views.ninePatch()
         println("QuestStatus = $status")
         launch(coroutineContext, start = CoroutineStart.UNDISPATCHED) {
-            quest.tex = when (status) {
-                QuestStatus.NONE -> resourceManager.getTexture("")
-                QuestStatus.NEW -> resourceManager.getTexture("quest-availiable.png")
-                QuestStatus.UNCOMPLETE -> resourceManager.getTexture("quest.png")
-                QuestStatus.COMPLETE -> resourceManager.getTexture("quest-ready.png")
+            quest.bitmap = when (status) {
+                QuestStatus.NONE -> resourceManager.getBmpSlice("")
+                QuestStatus.NEW -> resourceManager.getBmpSlice("quest-availiable.png")
+                QuestStatus.UNCOMPLETE -> resourceManager.getBmpSlice("quest.png")
+                QuestStatus.COMPLETE -> resourceManager.getBmpSlice("quest-ready.png")
             }
         }
     }
@@ -271,18 +270,16 @@ class ClientNpcConversation(
     val conversationId: Long,
     val ws: WebSocketClient
 ) {
-    val views = overlay.views
-
     fun setMood(mood: String) {
     }
 
     fun options(text: String, options: List<String>) {
         overlay.removeChildren()
-        overlay += views.solidRect(1280, 720, RGBAf(0, 0, 0, 0.75).rgba)
-        overlay += views.text(text, textSize = 48.0).apply { y = 128.0 }
+        overlay += SolidRect(1280.0, 720.0, RGBAf(0, 0, 0, 0.75).rgba)
+        overlay += Text(text, textSize = 48.0).apply { y = 128.0 }
         val referenceY = (720 - options.size * 96).toDouble()
         for ((index, option) in options.withIndex()) {
-            overlay += views.simpleButton(1280, 96, option, {
+            overlay += simpleButton(1280, 96, option, {
                 overlay.removeChildren()
                 ws.sendPacket(ClientInteractionResult(npcId, conversationId, index))
             }).apply {
@@ -303,21 +300,21 @@ class MmoMainScene(
     val MAP_SCALE = 3.0
     var ws: WebSocketClient? = null
     val entitiesById = LinkedHashMap<Long, ClientEntity>()
-    val background by lazy { views.solidRect(1280 / 3.0, 720 / 3.0, RGBAInt(0x1e, 0x28, 0x3c, 0xFF)) }
+    val background by lazy { SolidRect(1280 / 3.0, 720 / 3.0, RGBAInt(0x1e, 0x28, 0x3c, 0xFF)) }
     val camera by lazy {
-        views.camera().apply {
+        Camera().apply {
             scale = MAP_SCALE
             sceneView += this
         }
     }
     val entityContainer by lazy {
-        views.container().apply {
+        Container().apply {
             this += background
             camera += this
         }
     }
     val conversationOverlay by lazy {
-        views.container().apply {
+        Container().apply {
             sceneView += this
         }
     }
@@ -359,7 +356,7 @@ class MmoMainScene(
             ws?.onStringMessage?.invoke { str ->
                 val packet = deserializePacket(str)
 
-                println("CLIENT RECEIVED: $packet")
+                //println("CLIENT RECEIVED: $packet")
 
                 when (packet) {
                     is EntityDisappear -> {
@@ -500,29 +497,29 @@ class MmoMainScene(
         init()
         entityContainer.onClick {
             val pos = it.currentPos
-            println("CLICK")
+            //println("CLICK")
             ws?.sendPacket(ClientRequestMove((pos.x / 32.0).toInt(), (pos.y / 32.0).toInt()))
         }
 
         //entityContainer.addChild(views.tiledMap(resourcesRoot["tileset1.tsx"].readTiledMap(views)))
         //entityContainer.addChild(views.tiledMap(resourcesRoot["tilemap1.tmx"].readTiledMap(views)))
-        entityContainer.addChild(views.tiledMap(resourcesRoot["library1.tmx"].readTiledMap(views)))
+        entityContainer.addChild(resourcesRoot["library1.tmx"].readTiledMap(views).createView())
         entityContainer.keepChildrenSortedByY()
         entityContainer
         conversationOverlay
-        sceneView.addChild(views.simpleButton(160, 80, "SAY") {
+        sceneView.addChild(simpleButton(160, 80, "SAY") {
             val text = browser.prompt("What to say?", "")
             ws?.sendPacket(ClientSay(text))
         })
-        sceneView.addChild(views.simpleButton(160, 80, "DEBUG") {
+        sceneView.addChild(simpleButton(160, 80, "DEBUG") {
             views.debugViews = !views.debugViews
         }.apply { y = 80.0 })
-        moneyText = views.text("", textSize = 48.0).apply {
+        moneyText = Text("", textSize = 48.0).apply {
             x = 256.0
             sceneView += this
             mouseEnabled = false
         }
-        latencyText = views.text("", textSize = 48.0).apply {
+        latencyText = Text("", textSize = 48.0).apply {
             x = 800.0
             sceneView += this
             mouseEnabled = false
@@ -534,12 +531,12 @@ class MmoMainScene(
 inline fun <T : View> T.disableMouse(): T = this.apply { mouseEnabled = false }
 inline fun <T : View> T.alpha(value: Number): T = this.apply { alpha = value.toDouble() }
 
-fun Views.simpleButton(width: Int, height: Int, title: String, click: suspend () -> Unit): Container {
-    val out = container().apply {
-        val text = text(title, textSize = 52.0)
+fun simpleButton(width: Int, height: Int, title: String, click: suspend () -> Unit): Container {
+    val out = Container().apply {
+        val text = Text(title, textSize = 52.0)
         text.format = Html.Format(align = Html.Alignment.MIDDLE_CENTER, size = 52)
         text.textBounds.setTo(0, 0, width, height)
-        addChild(views.solidRect(width, height, RGBAInt(0xa0, 0xa0, 0xff, 0x7f)))
+        addChild(SolidRect(width.toDouble(), height.toDouble(), RGBAInt(0xa0, 0xa0, 0xff, 0x7f)))
         addChild(text)
         onClick {
             click()
