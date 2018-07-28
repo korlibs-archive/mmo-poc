@@ -99,16 +99,7 @@ fun main(args: Array<String>) = Korio {
     }
     println("Compression packed app...")
 
-    /*
-    val bundleBytes = try {
-        distVfs["bundle.js"].readAll()
-    } catch (e: Throwable) {
-        null
-    }
-    */
-
     val bundleBytesGzip = bundleBytes?.gzipCompress()
-
     val indexHtmlString = webVfs["index.html"].readString()
     val patchedIndexHtmlString = indexHtmlString.replace(
         "<script data-main=\"game\" src=\"require.min.js\" type=\"text/javascript\"></script>",
@@ -117,45 +108,31 @@ fun main(args: Array<String>) = Korio {
 
     val indexHtmlBytes = indexHtmlString.toByteArray(UTF8)
     val patchedIndexHtmlBytes = patchedIndexHtmlString.toByteArray(UTF8)
-
-    val patchedFiles = MemoryVfsMix(
-        "index.html" to indexHtmlBytes,
-        "index.patched.html" to patchedIndexHtmlBytes,
-        "bundle.js" to bundleBytes,
-        "bundle.js.gz.js" to bundleBytesGzip
-    )
-
     val builtTime = Date()
 
     println("Game assets ready")
 
     val server = embeddedServer(Netty, port = 8080) {
+        // region Feature Installation
         install(WebSockets)
         install(ConditionalHeaders)
         install(Sessions) {
             cookie<MySession>("MMO_SESSION")
         }
-
-        //tilemapLog.level = Logger.Level.TRACE
-        //Logger.defaultLevel = Logger.Level.TRACE
-
-        println("Pre TileMap")
-
-
-        println("Pre Routing")
+        // endregion
 
         routing {
             get("/bundle.js") {
-                if (call.request.headers[HttpHeaders.AcceptEncoding]?.contains("gzip", ignoreCase = true) == true) {
-                    call.response.header("Content-Encoding", "gzip")
-                    call.respondBytes(bundleBytesGzip) {
-                        versions += LastModifiedVersion(builtTime)
-                    }
-                } else {
+                //if (call.request.headers[HttpHeaders.AcceptEncoding]?.contains("gzip", ignoreCase = true) == true) {
+                //    call.response.header("Content-Encoding", "gzip")
+                //    call.respondBytes(bundleBytesGzip) {
+                //        versions += LastModifiedVersion(builtTime)
+                //    }
+                //} else {
                     call.respondBytes(bundleBytes) {
                         versions += LastModifiedVersion(builtTime)
                     }
-                }
+                //}
                 finish() // @TODO: Move this to respondFile
             }
             get("/") {
