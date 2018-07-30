@@ -2,6 +2,7 @@ package mmo.server
 
 import com.soywiz.korge.tiled.*
 import mmo.protocol.*
+import kotlin.coroutines.experimental.*
 
 open class EntityContainer : PacketSendChannel {
     val entities = LinkedHashSet<Entity>()
@@ -34,6 +35,10 @@ open class EntityContainer : PacketSendChannel {
     fun addUser(user: User) {
         add(user)
         user.sendAllEntities(user.container)
+        userAppeared(user)
+    }
+
+    fun userAppeared(user: User) {
         for (npc in npcs) {
             npc.onUserAppeared(user)
         }
@@ -44,5 +49,5 @@ fun PacketSendChannel.sendAllEntities(container: EntityContainer?) {
     for (entity in container?.entities?.toList() ?: listOf()) sendEntityAppear(entity)
 }
 
-open class ServerScene(val name: String, val map: TiledMapData) : EntityContainer() {
+open class ServerScene(val name: String, val map: TiledMapData, val coroutineContext: CoroutineContext) : EntityContainer() {
 }

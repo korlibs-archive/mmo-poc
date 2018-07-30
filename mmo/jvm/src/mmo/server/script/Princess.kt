@@ -1,7 +1,9 @@
 package mmo.server.script
 
 import com.soywiz.klock.*
+import com.soywiz.klogger.*
 import com.soywiz.korge.tiled.*
+import com.soywiz.korio.async.*
 import com.soywiz.korma.*
 import com.soywiz.korma.geom.*
 import kotlinx.coroutines.experimental.*
@@ -10,6 +12,8 @@ import mmo.server.*
 import mmo.shared.*
 
 class Princess(val scene: ServerScene) : Npc() {
+    private val logger = Logger("NPC.Princess")
+
     val map = scene.map
 
     val levers = (0 until 8).map {
@@ -43,17 +47,19 @@ class Princess(val scene: ServerScene) : Npc() {
 
     val leversInPosition get() = expectedLeversDirection == actualLeversDirection
 
-    val pos1 = map.getObjectPosByName("princess1") ?: Point(0, 0)
-    val pos2 = map.getObjectPosByName("princess2") ?: Point(0, 0)
-    val pos3 = map.getObjectPosByName("princess3") ?: Point(0, 0)
+    val posList = listOf(Point(0, 0)) + (1..4).map { map.getObjectPosByName("princess$it") ?: Point(0, 0) }
+    val pos1 = posList[1]
+    val pos2 = posList[2]
+    val pos3 = posList[3]
+    val pos4 = posList[4]
 
     init {
-        println("Princess($pos1, $pos2, $pos3)")
-        setPositionTo(pos1)
-        skinBody = Skins.Body.chubbyGirl
-        skinHair = Skins.Hair.girl1
-        skinHead = Skins.Head.girl
-        skinArmor = Skins.Armor.princess_dress1
+        logger.trace { "Princess($pos1, $pos2, $pos3, $pos4)" }
+        setPositionTo(pos3)
+        skinBody = Skins.Body.girl1
+        skinHair = Skins.Hair.princess
+        skinHead = Skins.Head.princess
+        skinArmor = Skins.Armor.princess_dress3
         name = "Princess"
         scene.add(this)
         for (lever in levers) scene.add(lever)
@@ -61,13 +67,15 @@ class Princess(val scene: ServerScene) : Npc() {
 
     override suspend fun script() {
         while (true) {
+            moveTo(pos4)
             moveTo(pos1)
-            moveTo(pos2)
+            lookAt(CharDirection.DOWN)
             wait(1.5.seconds)
-            moveTo(pos3)
+            moveTo(pos2)
             val people = container?.users?.size ?: 0
             say("Will someone else come?\nWe are already %d!", people + 1)
             wait(2.seconds)
+            moveTo(pos3)
         }
     }
 
@@ -91,8 +99,8 @@ class Princess(val scene: ServerScene) : Npc() {
         lookAt(user)
         conversationWith(user) {
             mood("happy")
-            say("Hello!")
-            options<Unit>("What do you want?") {
+            //say("Hello!")
+            options<Unit>("Hello! What do you want?") {
                 option("Where am I?") {
                     say("You are in a proof of concept of a MMO fully written in kotlin!")
                     say("I am written using Kotlin coroutines inside [Ktor](https://ktor.io/).")
@@ -137,6 +145,15 @@ class Princess(val scene: ServerScene) : Npc() {
                     }
                 }
 
+                option("Reset my account") {
+                    user.bag.clear()
+                    user.flags.clear()
+                    user.addItems("gold", 0) // Required so the key exists!
+                    user.sendInitialInfo()
+                    scene.sendEntityAppear(user)
+                    close()
+                }
+
                 option("Nothing, I'm ok!") {
                     close()
                 }
@@ -144,8 +161,16 @@ class Princess(val scene: ServerScene) : Npc() {
         }
     }
 
+    val questUpdateQueue = AsyncQueue()
     fun User.updateQuest() {
-        send(QuestUpdate(this@Princess.id, getQuestStatus(this)))
+        //questUpdateQueue(scene.coroutineContext) {
+        questUpdateQueue(DefaultDispatcher) {
+            try {
+                send(QuestUpdate(this@Princess.id, getQuestStatus(this@updateQuest)))
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            }
+        }
     }
 
     override fun onUserAppeared(user: User) {
@@ -156,7 +181,7 @@ class Princess(val scene: ServerScene) : Npc() {
         for (user in scene.users) user.updateQuest()
     }
 
-    fun getQuestStatus(user: User): QuestStatus {
+    suspend fun getQuestStatus(user: User): QuestStatus {
         val completedLevers = user.getFlag("princess-levers")
         val questStarted = user.getFlag("lever-puzzle-requested")
 

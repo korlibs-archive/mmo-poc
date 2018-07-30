@@ -29,7 +29,7 @@ buildscript {
                     "org.jetbrains.kotlinx:kotlinx-serialization-runtime{JSUFFIX}:$serializationVersion",
             ],
             "kuyo"        : ["com.soywiz:korge{SUFFIX}:$korgeVersion"],
-            "translations": ["com.soywiz:korio{SUFFIX}:$korgeVersion"],
+            "translations": ["com.soywiz:korge{SUFFIX}:$korgeVersion"],
     ]
     ext.libExecutables = [
             //"sample1": true

@@ -11,14 +11,14 @@ compileKotlin2Js {
 task buildAndCopy(type: Copy, dependsOn: ['build']) {
     // Copy kotlin.js and kotlin-meta.js from jar into web directory
     configurations.compile.each { File file ->
-    //println(file.absolutePath)
-    from(zipTree(file.absolutePath)) {
-        exclude "**/*.meta.js", "**/*.kjsm"
-        include { fileTreeElement ->
-        def path = fileTreeElement.path
-            path.endsWith(".js") && (path.startsWith("META-INF/resources/") || !path.startsWith("META-INF/"))
+        //println(file.absolutePath)
+        from(zipTree(file.absolutePath)) {
+            exclude "**/*.meta.js", "**/*.kjsm"
+            include { fileTreeElement ->
+            def path = fileTreeElement.path
+                path.endsWith(".js") && (path.startsWith("META-INF/resources/") || !path.startsWith("META-INF/"))
+            }
         }
-    }
     }
 
     from(new File("${buildDir}/resources/main")) {

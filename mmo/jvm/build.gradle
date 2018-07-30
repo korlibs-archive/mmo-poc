@@ -18,6 +18,9 @@ mainClassName = "mmo.server.BackendKt"
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+    compile "org.jetbrains.kotlin:kotlin-script-runtime:$kotlinVersion"
+    compile "org.jetbrains.kotlin:kotlin-script-util:$kotlinVersion"
+    compile "org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion"
     compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serializationVersion"
 
     compile "io.ktor:ktor-server-netty:$ktor_version"
@@ -25,6 +28,10 @@ dependencies {
     compile "io.ktor:ktor-auth:$ktor_version"
     compile "io.ktor:ktor-client-apache:$ktor_version"
     compile "io.ktor:ktor-jackson:$ktor_version"
+
+    compile "io.ktor.client:ktor-client-redis:$ktor_client_redis_version"
+
+    compile "com.soywiz:korio-ktor-ext-jvm:$korgeVersion"
 
     compile "ch.qos.logback:logback-classic:$logback_version"
 }

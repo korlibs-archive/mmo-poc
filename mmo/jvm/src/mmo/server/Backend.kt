@@ -4,23 +4,37 @@ import com.soywiz.korge.tiled.*
 import com.soywiz.korio.*
 import com.soywiz.korio.file.std.*
 import com.soywiz.korio.i18n.Language
+import com.soywiz.korio.lang.*
 import io.ktor.application.*
 import io.ktor.content.*
+import io.ktor.experimental.client.redis.*
 import io.ktor.features.*
+import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.http.cio.websocket.Frame
+import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.sessions.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.*
 import mmo.protocol.*
 import mmo.server.script.*
+import mmo.server.storage.*
+import mmo.server.util.*
 import mmo.shared.*
+import org.jetbrains.kotlin.script.jsr223.*
 import java.io.*
+import java.io.IOException
+import java.net.*
+import java.util.*
+import java.util.zip.*
+import javax.script.*
 import kotlin.coroutines.experimental.*
 import kotlin.reflect.*
+
 
 object Experiments {
     @JvmStatic
@@ -33,24 +47,94 @@ object Experiments {
 
 val gameContext = newSingleThreadContext("MySingleThread")
 
+class MySession(val uuid: String)
+
 fun main(args: Array<String>) = Korio {
     val webFolder =
         listOf(".", "..", "../..", "../../..").map { File(it).absoluteFile["web"] }.firstOrNull { it.exists() }
                 ?: error("Can't find 'web' folder")
     val webVfs = webFolder.toVfs()
+    val distVfs = webFolder["../dist"].toVfs()
 
     println("webFolder:$webFolder")
 
     val tilemap = webVfs["library1.tmx"].readTiledMapData()
     println("Post TileMap")
-    val mainScene = ServerScene("lobby", tilemap)
+    val mainScene = ServerScene("lobby", tilemap, gameContext)
 
     println("Building Princess NPC")
     Princess(mainScene).apply { start() }
 
+    val ktsEngine = ScriptEngineManager().getEngineByExtension("kts") as KotlinJsr223JvmLocalScriptEngine
+
+    val scriptedNpcs =
+        tilemap.objectLayers.flatMap { it.objects }.filter { it.info.type == "npc" && "script" in it.objprops }
+    for (scriptedNpc in scriptedNpcs) {
+        KScriptNpc(ktsEngine, mainScene, scriptedNpc.name).apply { start() }
+    }
+
+    val redisHost = System.getenv("REDIS_HOST") ?: "127.0.0.1"
+
+    println("Before Storage")
+    println("Redis Host: $redisHost")
+
+    val storage: Storage = try {
+        val redis = RedisClient(InetSocketAddress(redisHost, 6379))
+        redis.set("mmo", "running")
+        RedisStorage(redis, prefix = "mmo-")
+        //InmemoryStorage()
+    } catch (e: IOException) {
+        e.printStackTrace()
+        println("Couldn't use REDIS storage")
+        InmemoryStorage()
+    }
+
+    println("Storage: $storage")
+
+    println("Packing app...")
+    val bundleBytes = try {
+        webVfs["game.js"].miniWebpack().toByteArray()
+    } catch (e: Throwable) {
+        byteArrayOf()
+    }
+    println("Compression packed app...")
+
+    /*
+    val bundleBytes = try {
+        distVfs["bundle.js"].readAll()
+    } catch (e: Throwable) {
+        null
+    }
+    */
+
+    val bundleBytesGzip = bundleBytes?.gzipCompress()
+
+    val indexHtmlString = webVfs["index.html"].readString()
+    val patchedIndexHtmlString = indexHtmlString.replace(
+        "<script data-main=\"game\" src=\"require.min.js\" type=\"text/javascript\"></script>",
+        "<script src=\"bundle.js\" type=\"text/javascript\"></script>"
+    )
+
+    val indexHtmlBytes = indexHtmlString.toByteArray(UTF8)
+    val patchedIndexHtmlBytes = patchedIndexHtmlString.toByteArray(UTF8)
+
+    val patchedFiles = MemoryVfsMix(
+        "index.html" to indexHtmlBytes,
+        "index.patched.html" to patchedIndexHtmlBytes,
+        "bundle.js" to bundleBytes,
+        "bundle.js.gz.js" to bundleBytesGzip
+    )
+
+    val builtTime = Date()
+
+    println("Game assets ready")
+
     val server = embeddedServer(Netty, port = 8080) {
         install(WebSockets)
         install(ConditionalHeaders)
+        install(Sessions) {
+            cookie<MySession>("MMO_SESSION")
+        }
 
         //tilemapLog.level = Logger.Level.TRACE
         //Logger.defaultLevel = Logger.Level.TRACE
@@ -61,39 +145,62 @@ fun main(args: Array<String>) = Korio {
         println("Pre Routing")
 
         routing {
-            static("/") {
-                webSocket {
-                    launch(gameContext) {
-                        //println(Thread.currentThread())
-                        delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
-                        val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
-
-                        val user = User(object : PacketSendChannel {
-                            override fun send(packet: ServerPacket) {
-                                //println("OFFERING: $packet")
-                                sendQueue.offer(packet)
-                            }
-                        }).apply {
-                            this.skinBody = Skins.Body.chubby
-                            this.skinArmor = Skins.Armor.armor1
-                            this.skinHead = Skins.Head.elf1
-                            this.skinHair = Skins.Hair.pelo1
-                            this.setPositionTo(4, 4)
-                        }
-
-                        websocketWriteProcess(coroutineContext, this@webSocket, user, sendQueue)
-
-                        try {
-                            mainScene.addUser(user)
-                            user.send(UserSetId(user.id))
-                            websocketReadProcess(user)
-                        } finally {
-                            mainScene.remove(user)
-                        }
-                    }.join()
+            get("/bundle.js") {
+                if (call.request.headers[HttpHeaders.AcceptEncoding]?.contains("gzip", ignoreCase = true) == true) {
+                    call.response.header("Content-Encoding", "gzip")
+                    call.respondBytes(bundleBytesGzip) {
+                        versions += LastModifiedVersion(builtTime)
+                    }
+                } else {
+                    call.respondBytes(bundleBytes) {
+                        versions += LastModifiedVersion(builtTime)
+                    }
                 }
+                finish() // @TODO: Move this to respondFile
+            }
+            get("/") {
+                val userUid = call.getUserId()
+                call.respondBytes(patchedIndexHtmlBytes) {
+                    versions += LastModifiedVersion(builtTime)
+                }
+                finish() // @TODO: Move this to respondFile
+            }
+            webSocket("/") {
+                val userUid = call.getUserId()
 
-                default(File(webFolder, "index.html"))
+                launch(gameContext) {
+                    //println(Thread.currentThread())
+                    delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
+                    val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
+
+                    val user = User(object : PacketSendChannel {
+                        override fun send(packet: ServerPacket) {
+                            //println("OFFERING: $packet")
+                            sendQueue.offer(packet)
+                        }
+                    }, userUid, storage).apply {
+                        this.skinBody = Skins.Body.chubby
+                        this.skinArmor = Skins.Armor.armor1
+                        this.skinHead = Skins.Head.elf1
+                        this.skinHair = Skins.Hair.pelo1
+                        this.setPositionTo(4, 4)
+                    }
+
+                    websocketWriteProcess(gameContext, this@webSocket, user, sendQueue)
+
+                    try {
+                        mainScene.addUser(user)
+                        user.send(UserSetId(user.id))
+                        user.sendInitialInfo()
+                        user.userAppeared()
+                        websocketReadProcess(user)
+                    } finally {
+                        mainScene.remove(user)
+                    }
+                }.join()
+            }
+
+            static("/") {
                 files(webFolder)
             }
         }
@@ -103,7 +210,14 @@ fun main(args: Array<String>) = Korio {
         println("Post runBlocking")
     }
     println("Pre Server Start")
-    server.start(wait = true)
+    server.start()
+}
+
+fun ApplicationCall.getUserId(): String {
+    val session = sessions.get<MySession>()
+    val userUuid = session?.uuid ?: UUID.randomUUID().toString()
+    sessions.set(MySession(userUuid))
+    return userUuid
 }
 
 fun websocketWriteProcess(
@@ -183,3 +297,13 @@ suspend fun <T : BasePacket> SendChannel<Frame>.sendPacket(packet: T, clazz: KCl
 //suspend inline fun <reified T : BasePacket> SendChannel<Frame>.sendPacket(packet: T) {
 //    send(Frame.Text(serializePacket(packet, T::class)))
 //}
+
+fun ByteArray.gzipCompress(level: Int = 9): ByteArray = ByteArrayOutputStream(this.size).apply {
+    MyGZIPOutputStream(this, level).use { zipStream -> zipStream.write(this@gzipCompress) }
+}.toByteArray()
+
+internal class MyGZIPOutputStream(out: OutputStream, level: Int) : GZIPOutputStream(out) {
+    init {
+        def.setLevel(level)
+    }
+}

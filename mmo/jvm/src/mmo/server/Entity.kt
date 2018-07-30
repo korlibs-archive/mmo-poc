@@ -2,16 +2,18 @@ package mmo.server
 
 import com.soywiz.klock.*
 import com.soywiz.kmem.*
-import com.soywiz.korio.i18n.Language
+import com.soywiz.korio.i18n.*
 import com.soywiz.korma.*
 import com.soywiz.korma.geom.*
 import com.soywiz.korma.interpolation.*
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.*
 import mmo.protocol.*
+import mmo.server.storage.*
 import mmo.server.text.*
 import mmo.shared.*
 import org.jetbrains.annotations.*
+import java.util.*
 import java.util.concurrent.*
 import kotlin.collections.set
 import kotlin.coroutines.experimental.*
@@ -45,30 +47,44 @@ interface PacketSendChannel {
     fun send(packet: ServerPacket)
 }
 
-open class User(val sc: PacketSendChannel) : Actor(), PacketSendChannel by sc {
-    var language = Language.ENGLISH
-    val bag = LinkedHashMap<String, Int>()
-    val flags = LinkedHashSet<String>()
+open class User(val sc: PacketSendChannel, val userUuid: String, val storage: Storage) : Actor(),
+    PacketSendChannel by sc {
 
-    fun setFlag(flag: String, set: Boolean = true) = run { if (set) flags.add(flag) else flags.remove(flag) }
-    fun unsetFlag(flag: String) = setFlag(flag, false)
-    fun getFlag(flag: String): Boolean = flag in flags
+    var language = Language.ENGLISH
+    val flags = storage.set("user-$userUuid-flags") // FLAGS: Set<String>
+    val bag = storage.map("user-$userUuid-bag")     // BAG: Map<String, Int>
+    val props = storage.map("user-$userUuid-props") // CUSTOM PROPS: Map<String, String>
+
+    suspend fun setFlag(flag: String, set: Boolean = true) = run { if (set) flags.add(flag) else flags.remove(flag) }
+    suspend fun unsetFlag(flag: String) = flags.remove(flag)
+    suspend fun getFlag(flag: String): Boolean = flags.contains(flag)
 
     // @TODO: Transaction system here to prevent issues if the server crashes during the block!
-    inline fun doOnce(flag: String, callback: () -> Unit) {
+    suspend inline fun doOnce(flag: String, callback: suspend () -> Unit) {
         if (!getFlag(flag)) {
             setFlag(flag)
             callback()
         }
     }
 
-    fun getItemAmount(kind: String): Int = bag[kind] ?: 0
+    suspend fun getItemAmount(kind: String): Int = (bag.get(kind)?.toLong() ?: 0L).toInt()
 
-    fun addItems(kind: String, amount: Int) {
-        bag.getOrPut(kind) { 0 }
-        val newValue = bag[kind]!! + amount
-        bag[kind] = newValue
-        sc.send(UserBagUpdate(kind, newValue))
+    suspend fun addItems(kind: String, amount: Int) {
+        sc.send(UserBagUpdate(kind, bag.incr(kind, amount.toLong()).toInt()))
+    }
+
+    suspend fun sendAllBag() {
+        for ((k, v) in bag.map()) {
+            sc.send(UserBagUpdate(k, (v.toLongOrNull() ?: 0L).toInt()))
+        }
+    }
+
+    suspend fun sendInitialInfo() {
+        sendAllBag()
+    }
+
+    fun userAppeared() {
+        container?.userAppeared(this)
     }
 }
 
@@ -136,7 +152,7 @@ class OptionsBuilder<T>(val conversation: NpcConversation) {
     }
 }
 
-suspend fun <T> NpcConversation.options(@Nls text: String, callback: OptionsBuilder<T>.() -> Unit): T {
+suspend fun <T> NpcConversation.options(@Nls text: String, callback: suspend OptionsBuilder<T>.() -> Unit): T {
     val builder = OptionsBuilder<T>(this).apply {
         callback()
     }
@@ -188,7 +204,7 @@ abstract class Npc : Actor() {
     }
 }
 
-abstract class Actor() : Entity() {
+abstract class Actor : Entity() {
     suspend fun speed(scale: Double = DEFAULT_SPEED) {
         this.speed = scale
     }
@@ -239,10 +255,18 @@ abstract class Actor() : Entity() {
         // @TODO: Do formatting at the client?
         val texts = Texts.languages.map { lang ->
             val ttext = Texts.getText(text, lang)
-            lang to try { ttext.format(*args) } catch (e: Throwable) { text }
+            lang to try {
+                ttext.format(*args)
+            } catch (e: Throwable) {
+                text
+            }
         }.toMap()
         for (user in container?.users ?: listOf()) {
-            val rtext = texts[user.language] ?: texts[Language.ENGLISH] ?: try { text.format(*args) } catch (e: Throwable) { text }
+            val rtext = texts[user.language] ?: texts[Language.ENGLISH] ?: try {
+                text.format(*args)
+            } catch (e: Throwable) {
+                text
+            }
             user.send(EntitySay(id, rtext))
         }
         //container?.send(EntitySay(id, formattedText))
