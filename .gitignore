@@ -14,3 +14,5 @@
 /mmo-server.jar
 /node_modules
 /bundle.js
+/mmo/jvm/bundle.js
+package-lock.json
