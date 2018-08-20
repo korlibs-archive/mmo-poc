@@ -13,3 +13,4 @@
 *.iws
 /mmo-server.jar
 /node_modules
+/bundle.js

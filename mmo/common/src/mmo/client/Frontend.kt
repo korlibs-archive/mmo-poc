@@ -1,8 +1,10 @@
 package mmo.client
 
+import com.soywiz.kds.*
 import com.soywiz.klock.*
 import com.soywiz.klogger.*
 import com.soywiz.kmem.*
+import com.soywiz.korge.bitmapfont.*
 import com.soywiz.korge.component.docking.*
 import com.soywiz.korge.html.*
 import com.soywiz.korge.input.*
@@ -16,6 +18,7 @@ import com.soywiz.korge.view.tiles.*
 import com.soywiz.korim.bitmap.*
 import com.soywiz.korim.color.*
 import com.soywiz.korim.format.*
+import com.soywiz.korim.vector.*
 import com.soywiz.korinject.*
 import com.soywiz.korio.async.*
 import com.soywiz.korio.i18n.*
@@ -44,7 +47,7 @@ open class MmoModule : Module() {
         //Logger("korui-application").level = Logger.Level.TRACE
         injector
             .mapPrototype { MmoMainScene(get(), get(), get()) }
-            .mapSingleton { ResourceManager(get(), get()) }
+            .mapSingleton { ResourceManager(get(), get(), get()) }
             .mapSingleton { Browser(get()) }
         //.mapPrototype { MainScene(get()) }
         //.mapSingleton { ConnectionService() }
@@ -69,7 +72,7 @@ class CharacterSkin(val base: TileSet) {
 }
 
 // @TODO: Resource unloading, LCU and stuff
-class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) : AsyncDependency {
+class ResourceManager(val resourcesRoot: ResourcesRoot, val coroutineContext: CoroutineContext,val views: Views) : AsyncDependency {
     private val queue = AsyncThread()
     private val skins = LinkedHashMap<String, CharacterSkin>()
     private val bitmaps = LinkedHashMap<String, Bitmap32>()
@@ -77,9 +80,11 @@ class ResourceManager(val resourcesRoot: ResourcesRoot, val views: Views) : Asyn
     val emptySkin = CharacterSkin(TileSet(listOf(Bitmaps.transparent), 1, 1))
 
     lateinit var bubbleChat: NinePatchBitmap32
+    lateinit var font: BitmapFont
 
     override suspend fun init() {
         bubbleChat = resourcesRoot["bubble-chat.9.png"].readNinePatch(defaultImageFormats)
+        font = resourcesRoot["font1.fnt"].readBitmapFont()
     }
 
     suspend fun getBitmap(file: String): Bitmap32 {
@@ -145,7 +150,7 @@ class ClientEntity(
         anchorX = 0.5
     }
     val bubbleChatBg = NinePatchEx(resourceManager.bubbleChat, width = 64.0, height = 64.0).disableMouse().alpha(0.75)
-    val bubbleChatText = Text("", textSize = 8.0).apply {
+    val bubbleChatText = Text("", textSize = 8.0, font = resourceManager.font).apply {
         format = format.copy(color = Colors.BLACK)
     }
     val bubbleChat = Container().apply {
@@ -271,6 +276,8 @@ class ClientNpcConversation(
     val conversationId: Long,
     val ws: WebSocketClient
 ) {
+    val coroutineContext = resourceManager.coroutineContext
+
     fun setMood(mood: String) {
     }
 
@@ -281,17 +288,26 @@ class ClientNpcConversation(
         bgimageString = image
     }
 
-    suspend fun options(text: String, options: List<String>) {
+    fun options(text: String, options: List<String>) {
+        val imagePlaceholder = Container()
+
         if (bgimageBitmap == null && bgimageString != null) {
-            bgimageBitmap = resourceManager.resourcesRoot[bgimageString!!].readBitmapOptimized().slice()
+            launchImmediately(coroutineContext) {
+                bgimageBitmap = resourceManager.resourcesRoot[bgimageString!!].readBitmapOptimized().slice()
+                imagePlaceholder += Image(bgimageBitmap ?: Bitmaps.transparent).apply {
+                    position(96, -128)
+                }
+            }
+        } else {
+            imagePlaceholder += Image(bgimageBitmap ?: Bitmaps.transparent).apply {
+                position(96, -128)
+            }
         }
 
         overlay.removeChildren()
         overlay += SolidRect(1280.0, 720.0, RGBA(RGBAf(0, 0, 0, 0.75).rgba))
 
-        overlay += Image(bgimageBitmap ?: Bitmaps.transparent).apply {
-            position(96, -128)
-        }
+        overlay += imagePlaceholder
 
         //val heightSize = 96
         //val textSize = 48.0
@@ -301,10 +317,10 @@ class ClientNpcConversation(
 
         val heightWithPadding = heightSize + padding
 
-        overlay += Text(text, textSize = textSize).apply { y = 128.0 }
+        overlay += Text(text, textSize = textSize, font = resourceManager.font).apply { y = 128.0 }
         val referenceY = (720 - options.size * heightWithPadding).toDouble()
         for ((index, option) in options.withIndex()) {
-            overlay += simpleButton(1280, heightSize, option, {
+            overlay += simpleButton(1280, heightSize, option, resourceManager.font, {
                 overlay.removeChildren()
                 ws.sendPacket(ClientInteractionResult(npcId, conversationId, index))
             }).apply {
@@ -361,12 +377,17 @@ class MmoMainScene(
         }
     }
 
+    private val COLOR_TRANSFORM_NPC_OVER = ColorTransform(1, 1, 1, 1, 32, 32, 32, 0)
+    private val COLOR_TRANSFORM_NPC_OUT = ColorTransform()
+
     fun getOrCreateEntityById(id: Long): ClientEntity {
         return entitiesById.getOrPut(id) {
             ClientEntity(resourceManager, coroutineContext, id, views, this@MmoMainScene).apply {
                 rview.onClick {
                     ws?.sendPacket(ClientRequestInteract(id))
                 }
+                rview.onOver { rview.colorTransform = COLOR_TRANSFORM_NPC_OVER }
+                rview.onOut { rview.colorTransform = COLOR_TRANSFORM_NPC_OUT }
                 entityContainer.addChild(view)
                 entitiesById[id] = this
             }
@@ -451,9 +472,7 @@ class MmoMainScene(
                     }
                     is ConversationOptions -> {
                         val conversation = conversationsById[packet.id]
-                        launch(coroutineContext) {
-                            conversation?.options(packet.text, packet.options)
-                        }
+                        conversation?.options(packet.text, packet.options)
                     }
                     is UserBagUpdate -> {
                         bag[packet.item] = packet.amount
@@ -539,19 +558,19 @@ class MmoMainScene(
         entityContainer.keepChildrenSortedByY()
         entityContainer
         conversationOverlay
-        sceneView.addChild(simpleButton(160, 80, "SAY") {
+        sceneView.addChild(simpleButton(160, 80, "SAY", resourceManager.font) {
             val text = browser.prompt("What to say?", "")
             ws?.sendPacket(ClientSay(text))
         })
-        sceneView.addChild(simpleButton(160, 80, "DEBUG") {
+        sceneView.addChild(simpleButton(160, 80, "DEBUG", resourceManager.font) {
             views.debugViews = !views.debugViews
-        }.apply { y = 80.0 })
-        moneyText = Text("", textSize = 48.0).apply {
+        }.apply { y = 82.0 })
+        moneyText = Text("", textSize = 48.0, font = resourceManager.font).apply {
             x = 256.0
             sceneView += this
             mouseEnabled = false
         }
-        latencyText = Text("", textSize = 48.0).apply {
+        latencyText = Text("", textSize = 48.0, font = resourceManager.font).apply {
             x = 800.0
             sceneView += this
             mouseEnabled = false
@@ -563,14 +582,37 @@ class MmoMainScene(
 inline fun <T : View> T.disableMouse(): T = this.apply { mouseEnabled = false }
 inline fun <T : View> T.alpha(value: Number): T = this.apply { alpha = value.toDouble() }
 
-fun simpleButton(width: Int, height: Int, title: String, click: suspend () -> Unit): Container {
+object Gradient {
+    val buttonGradient = Bitmap32(16, 16).apply {
+        val c1 = Colors["#b2d6e0"].rgba
+        val c2 = Colors["#73a7b6"].rgba
+        context2d {
+            fillStyle(Context2d.Gradient(
+                Context2d.Gradient.Kind.LINEAR,
+                0.0, 0.0, 0.0,
+                0.0, 16.0, 0.0,
+                stops = doubleArrayListOf(0.0, 0.2, 0.3, 1.0),
+                colors = IntArrayList(c2, c1, c1, c2)
+            )) {
+                fillRect(0, 0, 16, 16)
+            }
+        }
+    }.slice()
+}
+
+fun simpleButton(width: Int, height: Int, title: String, font: BitmapFont, click: suspend () -> Unit): Container {
     val out = Container().apply {
-        val text = Text(title, textSize = 52.0)
-        text.format = Html.Format(align = Html.Alignment.MIDDLE_CENTER, size = 52)
+        val text = Text(title, textSize = 52.0, font = font)
+        text.format = Html.Format(align = Html.Alignment.MIDDLE_CENTER, size = 52, face = Html.FontFace.Bitmap(font))
         text.textBounds.setTo(0, 0, width, height)
-        addChild(SolidRect(width.toDouble(), height.toDouble(), RGBA(0xa0, 0xa0, 0xff, 0x7f)))
+        //addChild(SolidRect(width.toDouble(), height.toDouble(), RGBA(0xa0, 0xa0, 0xff, 0x7f)))
+        addChild(Image(Gradient.buttonGradient).apply {
+            this.width = width.toDouble()
+            this.height = height.toDouble()
+            this.alpha = 0.75
+        })
         addChild(text)
-        val outAlpha = 0.6
+        val outAlpha = 0.75
         alpha = outAlpha
         onClick {
             click()

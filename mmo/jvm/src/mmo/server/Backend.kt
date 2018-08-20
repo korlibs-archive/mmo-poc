@@ -110,6 +110,10 @@ fun main(args: Array<String>) = Korio {
 
     println("Game assets ready")
 
+
+    val bundleJsFile = File.createTempFile("mmo-poc", "bundle.js").apply { deleteOnExit() }
+    bundleJsFile.writeBytes(bundleBytes)
+
     val server = embeddedServer(Netty, port = 8080) {
         // region Feature Installation
         install(WebSockets)
@@ -127,9 +131,10 @@ fun main(args: Array<String>) = Korio {
                 //        versions += LastModifiedVersion(builtTime)
                 //    }
                 //} else {
-                call.respondBytes(bundleBytes) {
-                    versions += LastModifiedVersion(builtTime)
-                }
+                call.respondFile(bundleJsFile)
+                //call.respondBytes(bundleBytes) {
+                //    versions += LastModifiedVersion(builtTime)
+                //}
                 //}
                 finish() // @TODO: Move this to respondFile
             }
@@ -158,7 +163,8 @@ fun main(args: Array<String>) = Korio {
                         this.skinArmor = Skins.Armor.armor1
                         this.skinHead = Skins.Head.elf1
                         this.skinHair = Skins.Hair.pelo1
-                        this.setPositionTo(4, 4)
+                        this.lookAt(CharDirection.DOWN)
+                        this.setPositionTo(4, 6)
                     }
 
                     websocketWriteProcess(gameContext, this@webSocket, user, sendQueue)
