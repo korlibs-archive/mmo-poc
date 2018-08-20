@@ -99,6 +99,9 @@ data class ConversationMoodSet(val id: Long, val mood: String) : ServerPacket
 data class ConversationText(val id: Long, val text: String) : ServerPacket
 
 @Serializable
+data class ConversationImage(val id: Long, val image: String) : ServerPacket
+
+@Serializable
 data class ConversationOptions(val id: Long, val text: String, val options: List<String>) : ServerPacket
 
 // @TODO: It is possible to list @Serializable classes?
@@ -131,6 +134,7 @@ val serializableClasses = listOf(
     ConversationClose::class,
     ConversationMoodSet::class,
     ConversationText::class,
+    ConversationImage::class,
     ConversationOptions::class,
 
     // Quests

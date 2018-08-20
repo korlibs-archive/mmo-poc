@@ -99,6 +99,7 @@ class Princess(val scene: ServerScene) : Npc() {
         lookAt(user)
         conversationWith(user) {
             mood("happy")
+            image("chara/pricesa5.png")
             //say("Hello!")
             options<Unit>("Hello! What do you want?") {
                 option("Where am I?") {

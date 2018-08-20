@@ -124,6 +124,11 @@ class NpcConversation(val npc: Npc, val user: User) {
         }
     }
 
+    suspend fun image(image: String) {
+        user.send(ConversationImage(id, image))
+        //onUserSelection.waitOne()
+    }
+
     suspend fun say(text: String) {
         //user.send(ConversationText(id, text))
         //onUserSelection.waitOne()

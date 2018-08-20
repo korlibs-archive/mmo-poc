@@ -6,6 +6,7 @@ import kotlinx.coroutines.experimental.*
 import mmo.shared.*
 import org.intellij.lang.annotations.*
 import org.jetbrains.kotlin.script.jsr223.*
+import javax.script.*
 import kotlin.coroutines.experimental.*
 
 class KScriptNpc(val ktsEngine: KotlinJsr223JvmLocalScriptEngine, val scene: ServerScene, val npcName: String) : Npc() {
@@ -24,10 +25,14 @@ class KScriptNpc(val ktsEngine: KotlinJsr223JvmLocalScriptEngine, val scene: Ser
         println("Instantiated '$npcName' : $skinBody, $skinArmor, $skinHead, $skinHair with script '$script'")
     }
 
-    override suspend fun script() {
-        ktsEngine.put("npc", this)
+    var running = true
 
-        @Language("kotlin-script") // kotlin-script not available yet
+    override suspend fun script() {
+        if (!running) {
+            delay(10_000)
+            return
+        }
+
         val script = """
             import ${KScriptNpc::class.java.`package`.name}.*
             import ${Klock::class.java.`package`.name}.*
@@ -39,9 +44,24 @@ class KScriptNpc(val ktsEngine: KotlinJsr223JvmLocalScriptEngine, val scene: Ser
                 }
             }
         """.trimIndent()
-        //println(script)
-        val result = ktsEngine.eval(script)
-        (result as Job).join()
+
+        try {
+            val ktsEngine = ScriptEngineManager().getEngineByExtension("kts") as KotlinJsr223JvmLocalScriptEngine
+            ktsEngine.put("npc", this)
+
+            @Language("kotlin-script") // kotlin-script not available yet
+            //println(script)
+            val result = ktsEngine.eval(script)
+            (result as Job).join()
+        } catch (e: Throwable) {
+            System.err.println("There was a problem with the script npcName=${this.npcName}:")
+            System.err.println("// -------------")
+            System.err.println(script)
+            System.err.println("// -------------")
+            e.printStackTrace()
+            running = false
+            delay(10_000)
+        }
     }
 
     suspend fun move(place: String) {

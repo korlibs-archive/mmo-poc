@@ -265,6 +265,7 @@ class ClientEntity(
 }
 
 class ClientNpcConversation(
+    val resourceManager: ResourceManager,
     val overlay: Container,
     val npcId: Long,
     val conversationId: Long,
@@ -273,17 +274,41 @@ class ClientNpcConversation(
     fun setMood(mood: String) {
     }
 
-    fun options(text: String, options: List<String>) {
+    private var bgimageString: String? = null
+    private var bgimageBitmap: BmpSlice? = null
+
+    fun setImage(image: String) {
+        bgimageString = image
+    }
+
+    suspend fun options(text: String, options: List<String>) {
+        if (bgimageBitmap == null && bgimageString != null) {
+            bgimageBitmap = resourceManager.resourcesRoot[bgimageString!!].readBitmapOptimized().slice()
+        }
+
         overlay.removeChildren()
         overlay += SolidRect(1280.0, 720.0, RGBA(RGBAf(0, 0, 0, 0.75).rgba))
-        overlay += Text(text, textSize = 48.0).apply { y = 128.0 }
-        val referenceY = (720 - options.size * 96).toDouble()
+
+        overlay += Image(bgimageBitmap ?: Bitmaps.transparent).apply {
+            position(96, -128)
+        }
+
+        //val heightSize = 96
+        //val textSize = 48.0
+        val heightSize = 64
+        val textSize = 32.0
+        val padding = 2
+
+        val heightWithPadding = heightSize + padding
+
+        overlay += Text(text, textSize = textSize).apply { y = 128.0 }
+        val referenceY = (720 - options.size * heightWithPadding).toDouble()
         for ((index, option) in options.withIndex()) {
-            overlay += simpleButton(1280, 96, option, {
+            overlay += simpleButton(1280, heightSize, option, {
                 overlay.removeChildren()
                 ws.sendPacket(ClientInteractionResult(npcId, conversationId, index))
             }).apply {
-                y = referenceY + (index * 96).toDouble()
+                y = referenceY + (index * heightWithPadding).toDouble()
             }
         }
     }
@@ -411,7 +436,7 @@ class MmoMainScene(
                     }
                     is ConversationStart -> {
                         conversationsById[packet.id] =
-                                ClientNpcConversation(conversationOverlay, packet.npcId, packet.id, ws!!)
+                                ClientNpcConversation(resourceManager, conversationOverlay, packet.npcId, packet.id, ws!!)
                     }
                     is ConversationClose -> {
                         conversationsById.remove(packet.id)
@@ -420,9 +445,15 @@ class MmoMainScene(
                         val conversation = conversationsById[packet.id]
                         conversation?.setMood(packet.mood)
                     }
+                    is ConversationImage -> {
+                        val conversation = conversationsById[packet.id]
+                        conversation?.setImage(packet.image)
+                    }
                     is ConversationOptions -> {
                         val conversation = conversationsById[packet.id]
-                        conversation?.options(packet.text, packet.options)
+                        launch(coroutineContext) {
+                            conversation?.options(packet.text, packet.options)
+                        }
                     }
                     is UserBagUpdate -> {
                         bag[packet.item] = packet.amount
@@ -539,9 +570,13 @@ fun simpleButton(width: Int, height: Int, title: String, click: suspend () -> Un
         text.textBounds.setTo(0, 0, width, height)
         addChild(SolidRect(width.toDouble(), height.toDouble(), RGBA(0xa0, 0xa0, 0xff, 0x7f)))
         addChild(text)
+        val outAlpha = 0.6
+        alpha = outAlpha
         onClick {
             click()
         }
+        onOver { alpha = 1.0 }
+        onOut { alpha = outAlpha }
     }
     return out
 }

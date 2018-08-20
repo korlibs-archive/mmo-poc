@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" tiledversion="1.1.5" orientation="orthogonal" renderorder="right-down" width="30" height="30" tilewidth="32" tileheight="32" infinite="0" nextobjectid="26">
+<map version="1.0" tiledversion="1.1.5" orientation="orthogonal" renderorder="right-down" width="30" height="30" tilewidth="32" tileheight="32" infinite="0" nextobjectid="28">
  <tileset firstgid="1" source="library.tsx"/>
  <layer name="Capa de Patrones 1" width="30" height="30">
   <data encoding="csv">
@@ -232,5 +232,22 @@ wait(8.0.seconds)
   </object>
   <object id="24" name="librarian2" type="waypoint" x="800" y="128" width="32" height="32"/>
   <object id="25" name="librarian3" type="waypoint" x="800" y="288" width="32" height="32"/>
+  <object id="26" name="witch-teacher" type="npc" x="256" y="160" width="32" height="32">
+   <properties>
+    <property name="armor" value="dress_teach_witch"/>
+    <property name="body" value="girl1"/>
+    <property name="hair" value="teach_whitch"/>
+    <property name="head" value="whitch_hat"/>
+    <property name="name" value="Witch Teacher"/>
+    <property name="script">while (true) {
+
+look(&quot;down&quot;)
+move(&quot;witch-teacher2&quot;)
+wait(8.0.seconds)
+
+}</property>
+   </properties>
+  </object>
+  <object id="27" name="witch-teacher2" type="waypoint" x="256" y="192" width="32" height="32"/>
  </objectgroup>
 </map>
