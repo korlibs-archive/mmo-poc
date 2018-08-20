@@ -9,7 +9,6 @@ import io.ktor.application.*
 import io.ktor.content.*
 import io.ktor.experimental.client.redis.*
 import io.ktor.features.*
-import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.response.*
@@ -34,7 +33,6 @@ import java.util.zip.*
 import javax.script.*
 import kotlin.coroutines.experimental.*
 import kotlin.reflect.*
-
 
 object Experiments {
     @JvmStatic
@@ -93,7 +91,7 @@ fun main(args: Array<String>) = Korio {
 
     println("Packing app...")
     val bundleBytes = try {
-        webVfs["game.js"].miniWebpack().toByteArray()
+        webVfs["game.js"].miniWebpack().bundlePatches().toByteArray()
     } catch (e: Throwable) {
         byteArrayOf()
     }
@@ -129,9 +127,9 @@ fun main(args: Array<String>) = Korio {
                 //        versions += LastModifiedVersion(builtTime)
                 //    }
                 //} else {
-                    call.respondBytes(bundleBytes) {
-                        versions += LastModifiedVersion(builtTime)
-                    }
+                call.respondBytes(bundleBytes) {
+                    versions += LastModifiedVersion(builtTime)
+                }
                 //}
                 finish() // @TODO: Move this to respondFile
             }
@@ -282,5 +280,60 @@ fun ByteArray.gzipCompress(level: Int = 9): ByteArray = ByteArrayOutputStream(th
 internal class MyGZIPOutputStream(out: OutputStream, level: Int) : GZIPOutputStream(out) {
     init {
         def.setLevel(level)
+    }
+}
+
+fun String.bundlePatches(): String {
+    //function isInheritanceFromInterface(ctor, iface) {
+    //    if (ctor === iface)
+    //        return true;
+    //    var metadata = ctor.$metadata$;
+    //    if (metadata != null) {
+    //        var interfaces = metadata.interfaces;
+    //        for (var i = 0; i < interfaces.length; i++) {
+    //            if (isInheritanceFromInterface(interfaces[i], iface)) {
+    //                return true;
+    //            }
+    //        }
+    //    }
+    //    var superPrototype = ctor.prototype != null ? Object.getPrototypeOf(ctor.prototype) : null;
+    //    var superConstructor = superPrototype != null ? superPrototype.constructor : null;
+    //    return superConstructor != null && isInheritanceFromInterface(superConstructor, iface);
+    //}
+    return Regex("function isInheritanceFromInterface.*?return superConstructor.*?\\}", setOf(RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL)).replace(this) {
+        println("*********** Patched isInheritanceFromInterface")
+        """
+            function getAllInterfaces(ctor) {
+                if (ctor.${'$'}metadata${'$'} == null) ctor.${'$'}metadata${'$'} = {};
+                var metadata = ctor.${'$'}metadata${'$'};
+                if (metadata._allInterfaces === undefined) {
+                    var allInterfaces = metadata._allInterfaces = [];
+
+                    allInterfaces.push(ctor);
+
+                    var interfaces = metadata.interfaces;
+                    if (interfaces !== undefined) {
+                        for (var i = 0; i < interfaces.length; i++) {
+                            allInterfaces.push.apply(allInterfaces, getAllInterfaces(interfaces[i]));
+                        }
+                    }
+
+                    var superPrototype = ctor.prototype != null ? Object.getPrototypeOf(ctor.prototype) : null;
+                    var superConstructor = superPrototype != null ? superPrototype.constructor : null;
+                    if (superConstructor != null) {
+                        allInterfaces.push.apply(allInterfaces, getAllInterfaces(superConstructor));
+                    }
+                    // @TODO: fast remove duplicates
+                    //console.log('getAllInterfaces', ctor.name, metadata._allInterfaces);
+                    metadata._allInterfaces = metadata._allInterfaces.filter(function(item, pos, self) { return self.indexOf(item) === pos; });
+                }
+                return metadata._allInterfaces;
+            }
+
+            function isInheritanceFromInterface(ctor, iface) {
+                if (ctor === iface) return true;
+                return getAllInterfaces(ctor).indexOf(iface) >= 0;
+            }
+        """.trimIndent()
     }
 }

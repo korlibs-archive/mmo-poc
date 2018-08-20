@@ -9,7 +9,7 @@ use kotlin scripting for some NPCs, and optionally Redis for storage if availabl
 ### QuickStart
 
 1. Execute `./gradlew runAll`
-2. Open <http://127.0.0.1:8080> with your favourite browser
+2. Open <http://127.0.0.1:8080> with your favourite browser supporting WebGL
 
 **Note:** *if it fails, try again since kotlinx.serialization is experimental.*
 

@@ -4,7 +4,7 @@ package mmo.minigames.kuyo
 import com.soywiz.korge.bitmapfont.*
 import com.soywiz.korge.scene.*
 import com.soywiz.korge.view.*
-import kotlin.coroutines.experimental.*
+import kotlin.coroutines.*
 
 class MainMenuScene : Scene() {
     val queue = JobQueue()

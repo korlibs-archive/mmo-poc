@@ -190,6 +190,7 @@ abstract class Npc : Actor() {
                 job?.join()
             } catch (e: Throwable) {
                 e.printStackTrace()
+                delay(1000) // Wait 1 second before retrying to avoid spamming in the case of error at start
             }
         }
     }

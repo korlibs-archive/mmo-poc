@@ -86,7 +86,7 @@ class Princess(val scene: ServerScene) : Npc() {
                 moveTo(lever.pos + Point(0, 1))
                 lookAt(CharDirection.UP)
                 lever.on = false
-                delay(300)
+                delay(300.milliseconds)
             }
         }
 

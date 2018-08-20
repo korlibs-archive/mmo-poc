@@ -275,7 +275,7 @@ class ClientNpcConversation(
 
     fun options(text: String, options: List<String>) {
         overlay.removeChildren()
-        overlay += SolidRect(1280.0, 720.0, RGBAf(0, 0, 0, 0.75).rgba)
+        overlay += SolidRect(1280.0, 720.0, RGBA(RGBAf(0, 0, 0, 0.75).rgba))
         overlay += Text(text, textSize = 48.0).apply { y = 128.0 }
         val referenceY = (720 - options.size * 96).toDouble()
         for ((index, option) in options.withIndex()) {
@@ -300,7 +300,7 @@ class MmoMainScene(
     val MAP_SCALE = 3.0
     var ws: WebSocketClient? = null
     val entitiesById = LinkedHashMap<Long, ClientEntity>()
-    val background by lazy { SolidRect(1280 / 3.0, 720 / 3.0, RGBAInt(0x1e, 0x28, 0x3c, 0xFF)) }
+    val background by lazy { SolidRect(1280 / 3.0, 720 / 3.0, RGBA(0x1e, 0x28, 0x3c, 0xFF)) }
     val camera by lazy {
         Camera().apply {
             scale = MAP_SCALE
@@ -537,7 +537,7 @@ fun simpleButton(width: Int, height: Int, title: String, click: suspend () -> Un
         val text = Text(title, textSize = 52.0)
         text.format = Html.Format(align = Html.Alignment.MIDDLE_CENTER, size = 52)
         text.textBounds.setTo(0, 0, width, height)
-        addChild(SolidRect(width.toDouble(), height.toDouble(), RGBAInt(0xa0, 0xa0, 0xff, 0x7f)))
+        addChild(SolidRect(width.toDouble(), height.toDouble(), RGBA(0xa0, 0xa0, 0xff, 0x7f)))
         addChild(text)
         onClick {
             click()

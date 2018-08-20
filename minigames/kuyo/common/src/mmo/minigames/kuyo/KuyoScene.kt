@@ -313,7 +313,9 @@ class KuyoBoardView(
                         val item = transform.item
                         //println("PLACED: $item")
                         sequence {
-                            kuyos[item.pos] = ViewKuyo(item.pos, item.color, this@KuyoBoardView).addTo(this@KuyoBoardView).alpha(1.0)
+                            kuyos[item.pos] =
+                                    ViewKuyo(item.pos, item.color, this@KuyoBoardView).addTo(this@KuyoBoardView)
+                                        .alpha(1.0)
                         }
                     }
                     is KuyoTransform.Move -> {

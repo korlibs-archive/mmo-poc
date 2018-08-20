@@ -3,7 +3,7 @@ package mmo.minigames.kuyo
 /*
 import com.soywiz.korge.view.*
 import com.soywiz.korio.error.*
-import kotlin.coroutines.experimental.*
+import kotlin.coroutines.*
 
 class ParallelJob {
     @PublishedApi

@@ -49,5 +49,6 @@ fun PacketSendChannel.sendAllEntities(container: EntityContainer?) {
     for (entity in container?.entities?.toList() ?: listOf()) sendEntityAppear(entity)
 }
 
-open class ServerScene(val name: String, val map: TiledMapData, val coroutineContext: CoroutineContext) : EntityContainer() {
+open class ServerScene(val name: String, val map: TiledMapData, val coroutineContext: CoroutineContext) :
+    EntityContainer() {
 }

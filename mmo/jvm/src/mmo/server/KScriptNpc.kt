@@ -1,10 +1,12 @@
 package mmo.server
 
+import com.soywiz.klock.*
 import com.soywiz.korge.tiled.*
 import kotlinx.coroutines.experimental.*
 import mmo.shared.*
 import org.intellij.lang.annotations.*
 import org.jetbrains.kotlin.script.jsr223.*
+import kotlin.coroutines.experimental.*
 
 class KScriptNpc(val ktsEngine: KotlinJsr223JvmLocalScriptEngine, val scene: ServerScene, val npcName: String) : Npc() {
     val map = scene.map
@@ -26,18 +28,19 @@ class KScriptNpc(val ktsEngine: KotlinJsr223JvmLocalScriptEngine, val scene: Ser
         ktsEngine.put("npc", this)
 
         @Language("kotlin-script") // kotlin-script not available yet
-        val result = ktsEngine.eval(
-            """
-                import mmo.server.*
-                import com.soywiz.klock.*
-                import kotlinx.coroutines.experimental.*
-                launch {
-                    (bindings["npc"] as ${KScriptNpc::class.qualifiedName}).apply {
-                        $script
-                    }
+        val script = """
+            import ${KScriptNpc::class.java.`package`.name}.*
+            import ${Klock::class.java.`package`.name}.*
+            import ${Continuation::class.java.`package`.name}.*
+            import ${Deferred::class.java.`package`.name}.*
+            launch {
+                (bindings["npc"] as ${KScriptNpc::class.qualifiedName}).apply {
+                    $script
                 }
-            """
-        )
+            }
+        """.trimIndent()
+        //println(script)
+        val result = ktsEngine.eval(script)
         (result as Job).join()
     }
 
