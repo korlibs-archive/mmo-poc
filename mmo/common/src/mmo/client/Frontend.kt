@@ -294,9 +294,11 @@ class ClientNpcConversation(
         if (bgimageBitmap == null && bgimageString != null) {
             launchImmediately(coroutineContext) {
                 bgimageBitmap = resourceManager.resourcesRoot[bgimageString!!].readBitmapOptimized().slice()
-                imagePlaceholder += Image(bgimageBitmap ?: Bitmaps.transparent).apply {
+                val image = Image(bgimageBitmap ?: Bitmaps.transparent).apply {
                     position(96, -128)
                 }
+                imagePlaceholder += image
+                image.tween(image::alpha[0.0, 1.0], easing = Easing.EASE_IN_OUT_QUAD, time = 0.25.seconds)
             }
         } else {
             imagePlaceholder += Image(bgimageBitmap ?: Bitmaps.transparent).apply {
@@ -317,15 +319,44 @@ class ClientNpcConversation(
 
         val heightWithPadding = heightSize + padding
 
-        overlay += Text(text, textSize = textSize, font = resourceManager.font).apply { y = 128.0 }
+        overlay.alpha = 0.0
+        overlay.enableMouse()
+        val mainText = overlay.container {
+            this += Text(text, textSize = 64.0, font = resourceManager.font).apply { y = 128.0 }
+            alpha = 0.0
+            x = -160.0
+            scaleX = 0.75
+        }
+        val buttonsContainer = overlay.container {
+        }
         val referenceY = (720 - options.size * heightWithPadding).toDouble()
+        val buttons = arrayListOf<Container>()
         for ((index, option) in options.withIndex()) {
-            overlay += simpleButton(1280, heightSize, option, resourceManager.font, {
-                overlay.removeChildren()
-                ws.sendPacket(ClientInteractionResult(npcId, conversationId, index))
-            }).apply {
-                y = referenceY + (index * heightWithPadding).toDouble()
+            val button = Container().apply {
+                this += simpleButton(1280, heightSize, option, resourceManager.font, {
+                    overlay.disableMouse()
+                    overlay.removeChildren()
+                    ws.sendPacket(ClientInteractionResult(npcId, conversationId, index))
+                }).apply {
+                    y = referenceY + (index * heightWithPadding).toDouble()
+                }
+                x = 250.0 - index * 32.0
+                alpha = 0.0 + index * 0.1
             }
+            buttonsContainer += button
+            buttons += button
+        }
+        launchImmediately(coroutineContext) {
+
+            overlay.tween(
+                overlay::alpha[1.0].easeOutQuad(),
+                *buttons.map { it::x[0.0].easeOutQuad() }.toTypedArray(),
+                *buttons.map { it::alpha[1.0].easeOutQuad() }.toTypedArray(),
+                mainText::alpha[1.0].easeOutQuad(),
+                mainText::x[0.0].easeOutQuad(),
+                mainText::scaleX[1.0].easeOutQuad(),
+                time = 300.milliseconds
+            )
         }
     }
 }
@@ -579,6 +610,7 @@ class MmoMainScene(
     }
 }
 
+inline fun <T : View> T.enableMouse(): T = this.apply { mouseEnabled = false }
 inline fun <T : View> T.disableMouse(): T = this.apply { mouseEnabled = false }
 inline fun <T : View> T.alpha(value: Number): T = this.apply { alpha = value.toDouble() }
 
