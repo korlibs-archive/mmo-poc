@@ -16,3 +16,4 @@
 /bundle.js
 /mmo/jvm/bundle.js
 package-lock.json
+.DS_Store

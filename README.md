@@ -4,6 +4,8 @@ MMO Kotlin fullstack development. Server is done using [Ktor](https://ktor.io/) 
 and both communicate by serializing using [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization),
 use kotlin scripting for some NPCs, and optionally Redis for storage if available or `REDIST_HOST` env var set.
 
+**Blogs:** [Artist blog](https://tamy.es/tag/mmo/), [Programmer Blog](https://soywiz.com/tag/mmo/)
+
 ![](/docs/screenshot.png)
 
 ### QuickStart
