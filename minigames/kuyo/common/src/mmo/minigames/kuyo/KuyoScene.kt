@@ -17,8 +17,8 @@ import com.soywiz.korma.*
 import com.soywiz.korma.geom.*
 import com.soywiz.korma.random.*
 import com.soywiz.korui.input.*
-import kotlinx.coroutines.experimental.*
-import kotlin.coroutines.experimental.*
+import kotlinx.coroutines.*
+import kotlin.coroutines.*
 
 class KuyoScene(val seed: Long = Klock.currentTimeMillis()) : Scene() {
     lateinit var board: KuyoBoardView

@@ -8,7 +8,8 @@ import kotlin.reflect.*
 data class Packet(val type: String, val payload: String)
 
 //val KClass<*>.serialName get() = this.simpleName
-val KClass<*>.serialName get() = serializer().serialClassDesc.name
+//val KClass<*>.serialName get() = serializer().serialClassDesc.name
+val KClass<*>.serialName get() = serializer().descriptor.name
 
 val typesByName = serializableClasses.associateBy { it.serialName }
 

@@ -6,19 +6,19 @@ import com.soywiz.korio.file.std.*
 import com.soywiz.korio.i18n.Language
 import com.soywiz.korio.lang.*
 import io.ktor.application.*
-import io.ktor.content.*
 import io.ktor.experimental.client.redis.*
 import io.ktor.features.*
 import io.ktor.http.cio.websocket.*
 import io.ktor.http.cio.websocket.Frame
+import io.ktor.http.content.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.sessions.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.experimental.*
-import kotlinx.coroutines.experimental.channels.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
 import mmo.protocol.*
 import mmo.server.script.*
 import mmo.server.storage.*
@@ -31,7 +31,7 @@ import java.net.*
 import java.util.*
 import java.util.zip.*
 import javax.script.*
-import kotlin.coroutines.experimental.*
+import kotlin.coroutines.*
 import kotlin.reflect.*
 
 object Experiments {
@@ -207,7 +207,7 @@ fun websocketWriteProcess(
     user: User,
     sendChannel: Channel<ServerPacket>
 ) {
-    kotlinx.coroutines.experimental.launch(coroutineContext) {
+    launch(coroutineContext) {
         sendChannel.consumeEach { message ->
             //println("SENDING MESSAGE: $message to ${user.id}")
             ws.outgoing.sendPacket(message)
@@ -306,7 +306,10 @@ fun String.bundlePatches(): String {
     //    var superConstructor = superPrototype != null ? superPrototype.constructor : null;
     //    return superConstructor != null && isInheritanceFromInterface(superConstructor, iface);
     //}
-    return Regex("function isInheritanceFromInterface.*?return superConstructor.*?\\}", setOf(RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL)).replace(this) {
+    return Regex(
+        "function isInheritanceFromInterface.*?return superConstructor.*?\\}",
+        setOf(RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL)
+    ).replace(this) {
         println("*********** Patched isInheritanceFromInterface")
         """
             function getAllInterfaces(ctor) {

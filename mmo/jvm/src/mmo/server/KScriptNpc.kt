@@ -2,12 +2,12 @@ package mmo.server
 
 import com.soywiz.klock.*
 import com.soywiz.korge.tiled.*
-import kotlinx.coroutines.experimental.*
+import kotlinx.coroutines.*
 import mmo.shared.*
 import org.intellij.lang.annotations.*
 import org.jetbrains.kotlin.script.jsr223.*
 import javax.script.*
-import kotlin.coroutines.experimental.*
+import kotlin.coroutines.*
 
 class KScriptNpc(val ktsEngine: KotlinJsr223JvmLocalScriptEngine, val scene: ServerScene, val npcName: String) : Npc() {
     val map = scene.map

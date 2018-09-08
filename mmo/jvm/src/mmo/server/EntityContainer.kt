@@ -2,7 +2,7 @@ package mmo.server
 
 import com.soywiz.korge.tiled.*
 import mmo.protocol.*
-import kotlin.coroutines.experimental.*
+import kotlin.coroutines.*
 
 open class EntityContainer : PacketSendChannel {
     val entities = LinkedHashSet<Entity>()

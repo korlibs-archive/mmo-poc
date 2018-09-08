@@ -72,7 +72,7 @@ class RedisStorage(val redis: Redis, val prefix: String = "") : Storage {
         override suspend fun add(item: String): Unit = run { redis.sadd(pcol, item) }
         override suspend fun contains(item: String): Boolean = redis.sismember(pcol, item)
         override suspend fun remove(item: String): Unit = run { redis.srem(pcol, item) }
-        override suspend fun list(): List<String> = redis.smembers(pcol)
+        override suspend fun list(): List<String> = redis.smembers(pcol).toList()
         override suspend fun clear(): Unit = run { redis.del(pcol) }
     }
 
@@ -82,24 +82,9 @@ class RedisStorage(val redis: Redis, val prefix: String = "") : Storage {
         override suspend fun get(key: String): String? = redis.hget(pcol, key)
         override suspend fun contains(key: String): Boolean = redis.hexists(pcol, key)
         override suspend fun remove(key: String): Unit = run { redis.hdel(pcol, key) }
-        override suspend fun listKeys(): List<String> = redis.hkeys(pcol)
+        override suspend fun listKeys(): List<String> = redis.hkeys(pcol).toList()
         override suspend fun map(): Map<String, String> = redis.hgetall(pcol)
         override suspend fun incr(key: String, delta: Long): Long = redis.hincrby(pcol, key, delta)
         override suspend fun clear(): Unit = run { redis.del(pcol) }
     }
 }
-
-suspend fun Redis.commandBool(vararg args: Any?): Boolean = commandLong(*args) != 0L
-
-// Sets
-suspend fun Redis.sadd(key: String, member: String): Long = commandLong("sadd", key, member)
-
-suspend fun Redis.srem(key: String, member: String): Boolean = commandBool("srem", key, member)
-suspend fun Redis.sismember(key: String, member: String): Boolean = commandBool("sismember", key, member)
-suspend fun Redis.smembers(key: String): List<String> = commandArrayString("smembers", key)
-
-// HashMaps
-
-suspend fun Redis.hexists(key: String, member: String): Boolean = commandBool("hexists", key, member)
-suspend fun Redis.hdel(key: String, vararg members: String): Boolean = commandBool("hdel", key, *members)
-suspend fun Redis.hkeys(key: String): List<String> = commandArrayString("hkeys", key)

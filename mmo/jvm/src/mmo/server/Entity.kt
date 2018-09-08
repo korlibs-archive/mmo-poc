@@ -6,8 +6,8 @@ import com.soywiz.korio.i18n.*
 import com.soywiz.korma.*
 import com.soywiz.korma.geom.*
 import com.soywiz.korma.interpolation.*
-import kotlinx.coroutines.experimental.*
-import kotlinx.coroutines.experimental.channels.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
 import mmo.protocol.*
 import mmo.server.storage.*
 import mmo.server.text.*
@@ -16,7 +16,7 @@ import org.jetbrains.annotations.*
 import java.util.*
 import java.util.concurrent.*
 import kotlin.collections.set
-import kotlin.coroutines.experimental.*
+import kotlin.coroutines.*
 
 open class Entity() {
     var container: EntityContainer? = null
@@ -203,7 +203,7 @@ abstract class Npc : Actor() {
     suspend fun start() {
         println("start[0]")
         //launch(coroutineContext) {
-        launch(kotlinx.coroutines.experimental.DefaultDispatcher) {
+        launch(kotlinx.coroutines.DefaultDispatcher) {
             println("start[1]")
             run()
         }
