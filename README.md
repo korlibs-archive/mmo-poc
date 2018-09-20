@@ -1,5 +1,7 @@
 # mmo-poc
 
+[![Build Status](https://travis-ci.org/mmo-poc/mmo-poc.svg?branch=master)](https://travis-ci.org/mmo-poc/mmo-poc)
+
 MMO Kotlin fullstack development. Server is done using [Ktor](https://ktor.io/) and client is done using [Korge](https://github.com/korlibs/korlibs),
 and both communicate by serializing using [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization),
 use kotlin scripting for some NPCs, and optionally Redis for storage if available or `REDIST_HOST` env var set.

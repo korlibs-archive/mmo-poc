@@ -19,11 +19,11 @@ data class KuyoShape2(val k1: KuyoItem, val k2: KuyoItem) : KuyoShape {
     override val items = listOf(k1, k2)
     override fun rotatedRight(): KuyoShape2 {
         return when (k2.pos) {
-            Point(0, 1) -> KuyoShape2(k1, k2.copy(pos = PointInt(-1, 0)))
-            Point(-1, 0) -> KuyoShape2(k1, k2.copy(pos = PointInt(0, -1)))
-            Point(0, -1) -> KuyoShape2(k1, k2.copy(pos = PointInt(+1, 0)))
-            Point(+1, 0) -> KuyoShape2(k1, k2.copy(pos = PointInt(0, +1)))
-            else -> TODO()
+            Vector2Int(0, 1) -> KuyoShape2(k1, k2.copy(pos = PointInt(-1, 0)))
+            Vector2Int(-1, 0) -> KuyoShape2(k1, k2.copy(pos = PointInt(0, -1)))
+            Vector2Int(0, -1) -> KuyoShape2(k1, k2.copy(pos = PointInt(+1, 0)))
+            Vector2Int(+1, 0) -> KuyoShape2(k1, k2.copy(pos = PointInt(0, +1)))
+            else -> TODO("${k2.pos}")
         }
     }
 }

@@ -224,5 +224,7 @@ fun boardShouldBe(src: KuyoBoard, transform: (KuyoBoard) -> KuyoBoard, dst: Kuyo
 }
 
 fun transformsShouldBe(src: KuyoBoard, transform: (KuyoBoard) -> List<KuyoTransform>, dst: String) {
-    assertEquals(dst, transform(src).toString())
+    assertEquals(dst, transform(src).toString().simplifyVectorToString())
 }
+
+private fun String.simplifyVectorToString() = this.replace(Regex("IVector2Int\\(x=(\\d+), y=(\\d+)\\)"), "($1, $2)")
