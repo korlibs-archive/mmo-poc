@@ -1,0 +1,25 @@
+apply plugin: 'kotlin-multiplatform'
+
+kotlin {
+    targets {
+        fromPreset(presets.jvm, 'jvm')
+        fromPreset(presets.js, 'js') {
+            compilations.main {
+                compileKotlinJs.kotlinOptions {
+                    languageVersion = "1.3"
+                    sourceMap = true
+                    metaInfo = true
+                    moduleKind = "umd"
+                }
+                compileTestKotlinJs.kotlinOptions {
+                    languageVersion = "1.3"
+                    moduleKind = "umd"
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+    commonMainApi "com.soywiz:korge:$korgeVersion"
+}

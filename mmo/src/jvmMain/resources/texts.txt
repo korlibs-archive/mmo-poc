@@ -1,0 +1,80 @@
+<en>Next
+<es>Siguiente
+
+<en>Will someone else come?\nWe are already %d!
+<es>¿Vendrá alguien más?\n¡Ya somos %d!
+
+<en>Hello!
+<es>¡Hola!
+
+<en>Where am I?
+<es>¿Dónde estoy?
+
+<en>You are in a proof of concept of a MMO fully written in kotlin!
+<es>¡Estás en una prueba de concepto de un MMO escrito completamente en kotlin!
+
+<en>I am written using Kotlin coroutines inside [Ktor](https://ktor.io/).
+<es>Estoy escrita usando las corrutinas de Kotlin dentro de [Ktor](https://ktor.io/).
+
+<en>Give me some money!
+<es>¡Dame algo de dinero!
+
+<en>*Sigh* You have enough money already!
+<es>*Suspiro* ¡Ya tienes bastante dinero!
+
+<en>Goodbye!
+<es>¡Adiós!
+
+<en>Sure, here we go!
+<es>Por supuesto, ¡toma!
+
+<en>What are those 8 levers?
+<es>¿Qué son esas 8 palancas?
+
+<en>There are eight soldiers marching to\nthe battle waiting for them in the west.
+<es>Habían ocho soldados marchando a\nla batalla que les esperaba al oeste.
+
+<en>The soldier in the front, turns to the rest,\nand makes them a strange request:
+<es>El soldado que iba al frente, se gira al resto\ny les dice algo presto:
+
+<en>Half of us, should turn towards most of the others\nare, while the other half should do the opposite.
+<es>La mitad de nosotros, debemos girarnos hacia donde más de los nuestros hay\nmientras que el resto debe hacer lo contrario.
+
+<en>But you can't do the same as the mates that are\nnext to you.
+<es>Pero no podéis hacer lo mismo que los colegas\nque están junto a vosotros.
+
+<en>Then the soldier in the front, turned,\nand stood up gazing at the battle.
+<es>Y entonces, el soldado de enfrente, se giró\ny se quedó mirando fijamente la batalla.
+
+<en>What strange story, huh?
+<es>Qué historia tan rara, ¿verdad?
+
+<en>The soldiers are ready to the battle, miss!
+<es>¡Los soldados están listos para la batalla, mi señora!
+
+<en>Good job!
+<es>¡Bien hecho!
+
+<en>Nothing, I'm ok!
+<es>Nada, ya me iba.
+
+<en>What do you want?
+<es>¿Qué deseas?
+
+<en>Let's keep things as they were before...
+<es>Vamos a dejar las cosas como estaban...
+
+<en>Oh my!, these books are not sorted by name!
+<es>¡Dios mío!, ¡estos libros no están ordenados por nombre!
+
+<en>Done!
+<es>¡Listo!
+
+<en>Too bad, more work to be done here!
+<es>¡Qué mal!, ¡toca seguir trabajando!
+
+<en>Hello! What do you want?
+<es>¡Hola! ¿Qué es lo que deseas?
+
+<en>Reset my account
+<es>Reiniciar mi cuenta
