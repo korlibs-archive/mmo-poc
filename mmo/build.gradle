@@ -34,6 +34,13 @@ dependencies {
     jvmMainApi "org.jetbrains.kotlin:kotlin-script-util:1.3.11"
 }
 
+task runBackend(type: JavaExec) {
+    //classpath = sourceSets.main.runtimeClasspath
+    classpath = kotlin.targets.jvm.compilations.test.runtimeDependencyFiles
+    main = 'mmo.server.BackendKt'
+    //args 'appArg1'
+}
+
 //compileKotlin2Js {
 //    kotlinOptions.outputFile = "${rootProject.projectDir}/${web_dir}/game.js"
 //}
