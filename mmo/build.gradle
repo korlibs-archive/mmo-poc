@@ -10,6 +10,7 @@ kotlin {
         }
         jvmMain {
             dependencies {
+                // @NOTE: This is required since kotlin-compiler embeds an outdated kotlinx-coroutines version without a method required by ktor
                 implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core-common:1.3.3"
                 implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3"
 
@@ -83,12 +84,24 @@ task jsBuildAndCopy(type: Task, dependsOn: jsJar) {
     }
 }
 
+def allTargetClasspaths = kotlin.targets.jvm.compilations.main.runtimeDependencyFiles + kotlin.targets.jvm.compilations.main.compileDependencyFiles + kotlin.targets.jvm.compilations.main.output.allOutputs + kotlin.targets.jvm.compilations.main.output.classesDirs
+def mainClassFqName = "mmo.server.BackendKt"
+
 task runServer(type: JavaExec, dependsOn: jsBuildAndCopy) {
-    classpath kotlin.targets.jvm.compilations.main.runtimeDependencyFiles + kotlin.targets.jvm.compilations.main.compileDependencyFiles + kotlin.targets.jvm.compilations.main.output.allOutputs + kotlin.targets.jvm.compilations.main.output.classesDirs
-    main = "mmo.server.BackendKt"
+    classpath allTargetClasspaths
+    main = mainClassFqName
     args ""
 }
 
+task jvmFatJar(type: Jar) {
+    manifest {
+        attributes 'Main-Class': "${mainClassFqName}"
+    }
+    //baseName = "${rootProject.name}"
+    from { allTargetClasspaths.collect { it.isDirectory() ? it : zipTree(it) } }
+    duplicatesStrategy 'exclude'
+    with jvmJar
+}
 
 //clean.doFirst() {
 //    delete("${rootProject.projectDir}/${web_dir}")

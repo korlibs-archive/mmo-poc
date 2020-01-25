@@ -1,5 +1,6 @@
 package mmo.server
 
+import com.soywiz.klock.*
 import com.soywiz.korge.tiled.*
 import com.soywiz.korio.*
 import com.soywiz.korio.async.*
@@ -27,6 +28,7 @@ import mmo.shared.*
 import java.io.*
 import java.io.IOException
 import java.util.*
+import java.util.Date
 import java.util.zip.*
 import javax.script.*
 import kotlin.coroutines.*
@@ -67,13 +69,17 @@ fun main(args: Array<String>) = Korio {
         tilemap.objectLayers.flatMap { it.objects }.filter { it.info.type == "npc" && "script" in it.objprops }
 
     //println("Ignoring scriptedNpcs...")
-    for (scriptedNpc in scriptedNpcs) {
-        try {
-            KScriptNpc(ktsEngine, mainScene, scriptedNpc.name).apply { start() }
-        } catch (e: Throwable) {
-            e.printStackTrace()
+    println("Loading scriptedNpcs...")
+    val time = measureTime {
+        for (scriptedNpc in scriptedNpcs) {
+            try {
+                KScriptNpc(ktsEngine, mainScene, scriptedNpc.name).apply { start() }
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            }
         }
     }
+    println("Ok (${time.seconds}s)")
 
     val redisHost = System.getenv("REDIS_HOST") ?: "127.0.0.1"
 

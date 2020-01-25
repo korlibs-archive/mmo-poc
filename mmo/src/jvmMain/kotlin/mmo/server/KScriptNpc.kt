@@ -21,7 +21,7 @@ class KScriptNpc(val ktsEngine: ScriptEngine, val scene: ServerScene, val npcNam
         skinHair = npcObject.objprops["hair"]?.let { Skins.Hair[it.toString()] } ?: Skins.Hair.none
         name = npcObject.objprops["name"]?.toString() ?: npcObject.name
         scene.add(this)
-        println("Instantiated '$npcName' : $skinBody, $skinArmor, $skinHead, $skinHair with script '$script'")
+        //println("Instantiated '$npcName' : $skinBody, $skinArmor, $skinHead, $skinHair with script '$script'")
     }
 
     var running = true
@@ -48,7 +48,7 @@ class KScriptNpc(val ktsEngine: ScriptEngine, val scene: ServerScene, val npcNam
 
 
         try {
-            val ktsEngine = ScriptEngineManager().getEngineByExtension("kts")
+            //val ktsEngine = ScriptEngineManager().getEngineByExtension("kts")
 
             //println(script)
             coroutineScope {
