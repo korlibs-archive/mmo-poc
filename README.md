@@ -12,17 +12,14 @@ use kotlin scripting for some NPCs, and optionally Redis for storage if availabl
 
 ### QuickStart
 
-1. Execute `./gradlew runAll`
+1. Execute `./gradlew runServer`
 2. Open <http://127.0.0.1:8080> with your favourite browser supporting WebGL
-
-**Note:** *if it fails, try again since kotlinx.serialization is experimental.*
 
 ### Some commands
 
-* Genreate fatjar + Compile JS and run the backend serving the client: `./gradlew copyFatJarAndRunAll`
-* Run the backend only (JVM): `./gradlew :mmo-jvm:runServer`
-* Run the frontend only (JVM): `./gradlew :mmo-jvm:runClient`
-* Run the frontend only (JS): `./gradlew :mmo-js:buildAndCopy`
+* Run the backend (JVM) serving the client (JS): `./gradlew :runServer`
+
+* Generate FatJAR: `./gradlew jvmFatJar`
 
 ### Technical details
 

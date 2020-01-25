@@ -94,6 +94,24 @@ idea {
     }
 }
 
+task baseDeploy(type: Task) {
+    doLast {
+        exec {
+            commandLine "rsync",
+                    "-av",
+                    "Dockerfile",
+                    "docker-compose.yml",
+                    "mmo/build/libs/mmo.jar",
+                    "web",
+                    "soywiz:/home/virtual/soywiz/mmo.soywiz.com/"
+        }
+    }
+}
+
+task deploy(dependsOn: ":mmo:jvmFatJar") {
+    finalizedBy baseDeploy
+}
+
 /*
 task runAll(dependsOn: [":mmo-js:buildAndCopy", ":mmo-jvm:shadowJar", ":mmo-jvm:runServer"]) {
 
