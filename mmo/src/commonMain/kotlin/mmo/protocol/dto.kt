@@ -4,12 +4,9 @@ import kotlinx.serialization.*
 import mmo.shared.*
 
 // @TODO: Would be nice if only @Serializable was needed here
-@Serializable
 interface BasePacket
-
 interface ClientPacket : BasePacket
 interface ServerPacket : BasePacket
-
 enum class QuestStatus { NONE, NEW, UNCOMPLETE, COMPLETE }
 
 // Client/Server Packets

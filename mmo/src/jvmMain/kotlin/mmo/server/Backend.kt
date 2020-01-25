@@ -145,45 +145,56 @@ fun main(args: Array<String>) = Korio {
             }
             get("/") {
                 val userUid = call.getUserId()
-                call.respondBytes(patchedIndexHtmlBytes) {
+                //call.respondBytes(patchedIndexHtmlBytes) {
+                call.respondBytes(indexHtmlBytes) {
                     versions += LastModifiedVersion(builtTime)
                 }
                 finish() // @TODO: Move this to respondFile
             }
-            webSocket("/") {
-                val userUid = call.getUserId()
+            webSocket("/ws") {
+                val ws = this
+                println("Started websocket")
+                try {
+                    val userUid = call.getUserId()
+                    println("Started websocket [2]")
 
-                launch(gameContext) {
-                    //println(Thread.currentThread())
-                    delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
-                    val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
+                    launch(gameContext) {
+                        println("[1]")
+                        //println(Thread.currentThread())
+                        delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
+                        val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
+                        println("[2]")
 
-                    val user = User(object : PacketSendChannel {
-                        override fun send(packet: ServerPacket) {
-                            //println("OFFERING: $packet")
-                            sendQueue.offer(packet)
+                        val user = User(object : PacketSendChannel {
+                            override fun send(packet: ServerPacket) {
+                                //println("OFFERING: $packet")
+                                sendQueue.offer(packet)
+                            }
+                        }, userUid, storage).apply {
+                            this.skinBody = Skins.Body.chubby
+                            this.skinArmor = Skins.Armor.armor1
+                            this.skinHead = Skins.Head.elf1
+                            this.skinHair = Skins.Hair.pelo1
+                            this.lookAt(CharDirection.DOWN)
+                            this.setPositionTo(4, 6)
                         }
-                    }, userUid, storage).apply {
-                        this.skinBody = Skins.Body.chubby
-                        this.skinArmor = Skins.Armor.armor1
-                        this.skinHead = Skins.Head.elf1
-                        this.skinHair = Skins.Hair.pelo1
-                        this.lookAt(CharDirection.DOWN)
-                        this.setPositionTo(4, 6)
-                    }
 
-                    websocketWriteProcess(gameContext, this@webSocket, user, sendQueue)
+                        websocketWriteProcess(gameContext, ws, user, sendQueue)
 
-                    try {
-                        mainScene.addUser(user)
-                        user.send(UserSetId(user.id))
-                        user.sendInitialInfo()
-                        user.userAppeared()
-                        websocketReadProcess(user)
-                    } finally {
-                        mainScene.remove(user)
-                    }
-                }.join()
+                        try {
+                            mainScene.addUser(user)
+                            user.send(UserSetId(user.id))
+                            user.sendInitialInfo()
+                            user.userAppeared()
+                            websocketReadProcess(user)
+                        } finally {
+                            mainScene.remove(user)
+                        }
+                    }.join()
+                } catch (e: Throwable) {
+                    e.printStackTrace()
+                    throw e
+                }
             }
 
             static("/") {
@@ -202,13 +213,16 @@ fun main(args: Array<String>) = Korio {
 fun ApplicationCall.getUserId(): String {
     val session = sessions.get<MySession>()
     val userUuid = session?.uuid ?: UUID.randomUUID().toString()
-    sessions.set(MySession(userUuid))
+    if (session?.uuid != userUuid) {
+        sessions.set(MySession(userUuid))
+    }
     return userUuid
 }
 
 fun websocketWriteProcess(
     coroutineContext: CoroutineContext,
-    ws: DefaultWebSocketServerSession,
+    //ws: DefaultWebSocketServerSession,
+    ws: WebSocketServerSession,
     user: User,
     sendChannel: Channel<ServerPacket>
 ) {
@@ -220,7 +234,8 @@ fun websocketWriteProcess(
     }
 }
 
-suspend fun DefaultWebSocketServerSession.websocketReadProcess(user: User) {
+//suspend fun DefaultWebSocketServerSession.websocketReadProcess(user: User) {
+suspend fun WebSocketServerSession.websocketReadProcess(user: User) {
     try {
         var moveJob: Job? = null
         var interfactionJob: Job? = null

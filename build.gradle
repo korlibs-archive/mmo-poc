@@ -42,6 +42,7 @@ allprojects {
 
 subprojects {
     apply plugin: "kotlin-multiplatform"
+    apply plugin: "kotlinx-serialization"
 
     kotlin {
         jvm {
@@ -53,7 +54,8 @@ subprojects {
         js {
             [compilations.main, compilations.test]*.kotlinOptions {
                 languageVersion = "1.3"
-                sourceMap = true
+                //sourceMap = true
+                sourceMap = false
                 metaInfo = true
                 moduleKind = "umd"
                 //moduleKind = "amd"

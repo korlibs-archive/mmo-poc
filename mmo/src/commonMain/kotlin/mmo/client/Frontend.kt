@@ -55,9 +55,9 @@ open class MmoModule : Module() {
     }
 }
 
-open class Browser(val injector: AsyncInjector) {
-    fun prompt(msg: String, default: String): String {
-        TODO()
+open class Browser(val gameWindow: GameWindow) {
+    suspend fun prompt(msg: String, default: String): String {
+        return gameWindow.prompt(msg, default)
     }
 }
 
@@ -438,10 +438,16 @@ class MmoMainScene(
 
     suspend fun init() {
         try {
-            ws = WebSocketClient((injector.getOrNull() ?: ServerEndPoint("ws://127.0.0.1:8080/")).endpoint)
+            ws = WebSocketClient((injector.getOrNull() ?: ServerEndPoint("ws://127.0.0.1:8080/ws/")).endpoint)
+            val ws = ws!!
             Console.error("Language: ${Language.CURRENT}")
-            ws?.sendPacket(ClientSetLang(Language.CURRENT.iso6391))
-            ws?.onStringMessage?.invoke { str ->
+            ws.onError { it.printStackTrace() }
+            ws.onClose {
+                //enterDebugger()
+                println("WS closed")
+            }
+            ws.sendPacket(ClientSetLang(Language.CURRENT.iso6391))
+            ws.onStringMessage { str ->
                 val packet = deserializePacket(str)
 
                 //println("CLIENT RECEIVED: $packet")
@@ -499,7 +505,7 @@ class MmoMainScene(
                     }
                     is ConversationStart -> {
                         conversationsById[packet.id] =
-                                ClientNpcConversation(resourceManager, conversationOverlay, packet.npcId, packet.id, ws!!, scope)
+                            ClientNpcConversation(resourceManager, conversationOverlay, packet.npcId, packet.id, ws!!, scope)
                     }
                     is ConversationClose -> {
                         conversationsById.remove(packet.id)
