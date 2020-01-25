@@ -1,0 +1,92 @@
+apply plugin: "kotlin-multiplatform"
+
+kotlin {
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation "com.soywiz.korlibs.korge:korge:1.5.5"
+                //implementation project(":minigames:kuyo")
+            }
+        }
+        jvmMain {
+            dependencies {
+                //implementation kotlin("compiler")
+                //implementation kotlin("scripting-jsr223")
+                //implementation kotlin("script-runtime")
+                //implementation kotlin("script-util")
+
+                //implementation project(":ktor-client-redis")
+                implementation "io.ktor:ktor:$ktor_version"
+                implementation "io.ktor:ktor-auth:$ktor_version"
+                implementation "io.ktor:ktor-server-netty:$ktor_version"
+                implementation "io.ktor:ktor-websockets:$ktor_version"
+                implementation "io.ktor:ktor-client-apache:$ktor_version"
+                implementation "io.ktor:ktor-jackson:$ktor_version"
+            }
+        }
+    }
+}
+
+//
+//compileKotlin2Js {
+//    kotlinOptions.outputFile = "${rootProject.projectDir}/${web_dir}/game.js"
+//}
+//
+//[compileKotlin2Js, compileTestKotlin2Js]*.configure {
+//    kotlinOptions.moduleKind = "umd"
+//    kotlinOptions.sourceMap = false
+//    kotlinOptions.metaInfo = false
+//}
+//
+task jsBuildAndCopy(type: Task, dependsOn: jsJar) {
+    // Copy kotlin.js and kotlin-meta.js from jar into web directory
+    doLast {
+        copy {
+            def jsCompilations = project.kotlin.targets.js.compilations
+            (jsCompilations.main.output.allOutputs + jsCompilations.main.runtimeDependencyFiles).each { File file ->
+                //println(file.absolutePath)
+                if (file.isDirectory()) {
+                    from(fileTree(file.absolutePath))
+                } else {
+                    from(zipTree(file.absolutePath)) {
+                        exclude "**/*.meta.js", "**/*.kjsm"
+                        include { fileTreeElement ->
+                            def path = fileTreeElement.path
+                            path.endsWith(".js") && (path.startsWith("META-INF/resources/") || !path.startsWith("META-INF/"))
+                        }
+                    }
+                }
+            }
+
+            from(new File("${buildDir}/resources/main")) {
+                exclude "**/*.meta.js", "**/*.kjsm"
+            }
+
+            // Copy scripts to web directory
+            from(new File("${buildDir}/classes/main")) {
+                exclude "**/*.meta.js", "**/*.kjsm"
+            }
+
+            from(new File("${buildDir}/classes/test")) {
+                exclude "**/*.meta.js", "**/*.kjsm"
+            }
+
+            from(new File("${buildDir}/resources/test")) {
+                exclude "**/*.meta.js", "**/*.kjsm"
+            }
+            includeEmptyDirs = false
+            into "${rootProject.projectDir}/${web_dir}"
+        }
+    }
+}
+
+task runServer(type: JavaExec, dependsOn: jsBuildAndCopy) {
+    classpath kotlin.targets.jvm.compilations.main.runtimeDependencyFiles + kotlin.targets.jvm.compilations.main.compileDependencyFiles + kotlin.targets.jvm.compilations.main.output.allOutputs + kotlin.targets.jvm.compilations.main.output.classesDirs
+    main = "mmo.server.BackendKt"
+    args ""
+}
+
+
+//clean.doFirst() {
+//    delete("${rootProject.projectDir}/${web_dir}")
+//}

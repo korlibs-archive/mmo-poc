@@ -1,7 +1,12 @@
 rootProject.name = 'mmo-poc'
-
 enableFeaturePreview('GRADLE_METADATA')
 
+include ":translations"
+include ":mmo"
+//include ":minigames:kuyo"
+//include ":ktor-client-redis"
+
+/*
 def nativeEnabled() {
     return System.getenv("CI") != "true"
 }
@@ -36,3 +41,4 @@ def registerProject2Jvm(name, rootPath, desc) {
 registerProject1('mmo', 'mmo', ".")
 registerProject1('kuyo', 'kuyo', "minigames")
 registerProject1('translations', 'translations', ".")
+*/

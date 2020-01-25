@@ -1,0 +1,9 @@
+kotlin {
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation "com.soywiz.korlibs.korge:korge:1.5.5"
+            }
+        }
+    }
+}
