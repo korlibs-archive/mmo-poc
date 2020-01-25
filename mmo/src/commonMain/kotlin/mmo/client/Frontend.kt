@@ -330,7 +330,7 @@ class ClientNpcConversation(
         overlay.alpha = 0.0
         overlay.enableMouse()
         val mainText = overlay.container {
-            this += Text(text, textSize = 64.0, font = resourceManager.font).apply { y = 128.0 }
+            this += Text(text, textSize = 36.0, font = resourceManager.font).apply { y = 128.0 }
             alpha = 0.0
             x = -160.0
             scaleX = 0.75
@@ -653,8 +653,8 @@ object Gradient {
 
 fun simpleButton(width: Int, height: Int, title: String, font: BitmapFont, scope: CoroutineScope, click: suspend () -> Unit): Container {
     val out = Container().apply {
-        val text = Text(title, textSize = 52.0, font = font)
-        text.format = Html.Format(align = Html.Alignment.MIDDLE_CENTER, size = 52, face = Html.FontFace.Bitmap(font))
+        val text = Text(title, textSize = 36.0, font = font)
+        text.format = Html.Format(align = Html.Alignment.MIDDLE_CENTER, size = 36, face = Html.FontFace.Bitmap(font))
         text.textBounds.setTo(0, 0, width, height)
         //addChild(SolidRect(width.toDouble(), height.toDouble(), RGBA(0xa0, 0xa0, 0xff, 0x7f)))
         addChild(Image(Gradient.buttonGradient).apply {

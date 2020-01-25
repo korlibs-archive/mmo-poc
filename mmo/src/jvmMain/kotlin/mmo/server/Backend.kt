@@ -66,12 +66,14 @@ fun main(args: Array<String>) = Korio {
     val scriptedNpcs =
         tilemap.objectLayers.flatMap { it.objects }.filter { it.info.type == "npc" && "script" in it.objprops }
 
-    println("Ignoring scriptedNpcs...")
-    /*
+    //println("Ignoring scriptedNpcs...")
     for (scriptedNpc in scriptedNpcs) {
-        KScriptNpc(ktsEngine, mainScene, scriptedNpc.name).apply { start() }
+        try {
+            KScriptNpc(ktsEngine, mainScene, scriptedNpc.name).apply { start() }
+        } catch (e: Throwable) {
+            e.printStackTrace()
+        }
     }
-     */
 
     val redisHost = System.getenv("REDIS_HOST") ?: "127.0.0.1"
 
@@ -153,17 +155,13 @@ fun main(args: Array<String>) = Korio {
             }
             webSocket("/ws") {
                 val ws = this
-                println("Started websocket")
                 try {
                     val userUid = call.getUserId()
-                    println("Started websocket [2]")
 
                     launch(gameContext) {
-                        println("[1]")
                         //println(Thread.currentThread())
                         delay(100) // @TODO: Remove once client start receiving messages from websockets from the very beginning
                         val sendQueue = Channel<ServerPacket>(Channel.UNLIMITED)
-                        println("[2]")
 
                         val user = User(object : PacketSendChannel {
                             override fun send(packet: ServerPacket) {
