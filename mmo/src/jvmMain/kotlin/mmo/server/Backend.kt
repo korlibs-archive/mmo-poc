@@ -66,7 +66,7 @@ fun main(args: Array<String>) = Korio {
     val ktsEngine = ScriptEngineManager().getEngineByExtension("kts")
 
     val scriptedNpcs =
-        tilemap.objectLayers.flatMap { it.objects }.filter { it.info.type == "npc" && "script" in it.objprops }
+        tilemap.objectLayers.flatMap { it.objects }.filter { it.type == "npc" && "script" in it.properties }
 
     //println("Ignoring scriptedNpcs...")
     println("Loading scriptedNpcs...")

@@ -9,22 +9,22 @@ data class Packet(val type: String, val payload: String)
 
 //val KClass<*>.serialName get() = this.simpleName
 //val KClass<*>.serialName get() = serializer().serialClassDesc.name
-@UseExperimental(ImplicitReflectionSerializer::class)
-val KClass<*>.serialName get() = serializer().descriptor.name
+@OptIn(InternalSerializationApi::class)
+val KClass<*>.serialName: String get() = serializer().descriptor.serialName
 
 val typesByName by lazy {
     serializableClasses.associateBy { it.serialName }
 }
 
-@UseExperimental(ImplicitReflectionSerializer::class)
+@OptIn(InternalSerializationApi::class)
 fun <T : Any> serializePacket(obj: T, clazz: KClass<T>): String {
-    return Json.stringify(Packet(clazz.serialName, Json.stringify(clazz.serializer(), obj)))
+    return Json.encodeToString(Packet(clazz.serialName, Json.encodeToString(clazz.serializer(), obj)))
 }
 
-@UseExperimental(ImplicitReflectionSerializer::class)
+@OptIn(InternalSerializationApi::class)
 inline fun deserializePacket(str: String): BasePacket {
-    val packet = Json.parse(Packet::class.serializer(), str)
+    val packet = Json.decodeFromString(Packet::class.serializer(), str)
     val clazz = typesByName[packet.type]
             ?: error("Class '${packet.type}' is not available for serializing :: available=${typesByName.keys}")
-    return Json.parse(clazz.serializer(), packet.payload)
+    return Json.decodeFromString(clazz.serializer(), packet.payload)
 }

@@ -10,16 +10,17 @@ import kotlin.coroutines.*
 
 class KScriptNpc(val ktsEngine: ScriptEngine, val scene: ServerScene, val npcName: String) : Npc() {
     val map = scene.map
-    val npcObject = map.getObjectByName(npcName) ?: error("Can't find npc with name '$npcName' in $map")
-    val script = npcObject.objprops["script"]?.toString() ?: ""
+    val npcObject: TiledMap.Object = map.getObjectByName(npcName) ?: error("Can't find npc with name '$npcName' in $map")
+    val script = npcObject.properties["script"]?.toString() ?: ""
+
 
     init {
         setPositionTo(npcObject.getPos(map))
-        skinBody = npcObject.objprops["body"]?.let { Skins.Body[it.toString()] } ?: Skins.Body.chubby
-        skinArmor = npcObject.objprops["armor"]?.let { Skins.Armor[it.toString()] } ?: Skins.Armor.none
-        skinHead = npcObject.objprops["head"]?.let { Skins.Head[it.toString()] } ?: Skins.Head.none
-        skinHair = npcObject.objprops["hair"]?.let { Skins.Hair[it.toString()] } ?: Skins.Hair.none
-        name = npcObject.objprops["name"]?.toString() ?: npcObject.name
+        skinBody = npcObject.properties["body"]?.let { Skins.Body[it.toString()] } ?: Skins.Body.chubby
+        skinArmor = npcObject.properties["armor"]?.let { Skins.Armor[it.toString()] } ?: Skins.Armor.none
+        skinHead = npcObject.properties["head"]?.let { Skins.Head[it.toString()] } ?: Skins.Head.none
+        skinHair = npcObject.properties["hair"]?.let { Skins.Hair[it.toString()] } ?: Skins.Hair.none
+        name = npcObject.properties["name"]?.toString() ?: npcObject.name
         scene.add(this)
         //println("Instantiated '$npcName' : $skinBody, $skinArmor, $skinHead, $skinHair with script '$script'")
     }

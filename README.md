@@ -1,4 +1,4 @@
-# mmo-poc
+# korge-kingdom
 
 [![Build Status](https://travis-ci.org/mmo-poc/mmo-poc.svg?branch=master)](https://travis-ci.org/mmo-poc/mmo-poc)
 

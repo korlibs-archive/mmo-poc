@@ -1,3 +1,5 @@
+@file:Suppress("WarningOnMainUnusedParameterMigration")
+
 import com.soywiz.korge.tiled.*
 import com.soywiz.korio.*
 import com.soywiz.korio.file.*

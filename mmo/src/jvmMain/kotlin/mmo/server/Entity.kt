@@ -226,8 +226,8 @@ abstract class Actor : Entity() {
 
     fun setPositionTo(pos: IPoint) = setPositionTo(pos.x, pos.y)
 
-    suspend fun moveBy(dx: Number, dy: Number) = moveTo(getCurrentPosition() + Point(dx, dy))
-    suspend fun moveTo(x: Number, y: Number) = moveTo(Point(x, y))
+    suspend fun moveBy(dx: Number, dy: Number) = moveTo(getCurrentPosition() + Point(dx.toDouble(), dy.toDouble()))
+    suspend fun moveTo(x: Number, y: Number) = moveTo(Point(x.toDouble(), y.toDouble()))
 
     suspend fun moveBy(delta: IPoint) = moveTo(getCurrentPosition() + Point(delta.x, delta.y))
 
